@@ -53,16 +53,14 @@ var STATUS_GENERICOS = [
 'Buscando referências...',
 'Concentrado nos estudos...',
 'Revisando anotações...',
-'Absorto em leitura profunda...',
 'Decifrando runas antigas...',
 'Consultando o índice...',
 'Copiando passagens importantes...',
-'Passando os olhos pelo sumário...',
+'Lendo o sumário...',
 'Marcando a página com cuidado...',
 'Comparando duas passagens do texto...',
 'Relendo o mesmo parágrafo pela terceira vez...',
 'Organizando os papéis sobre a mesa...',
-'Ajustando os óculos para ler melhor...',
 'Seguindo a linha com o dedo...',
 'Virando as páginas devagar...',
 'Pousando o livro por um momento...',
@@ -70,12 +68,12 @@ var STATUS_GENERICOS = [
 ];
 var STATUS_POR_LIVRO = [
 'Folheando "{livro}"...',
-'Absorto na leitura de "{livro}"...',
+'Concentrado na leitura de "{livro}"...',
 'Sublinhando trechos de "{livro}"...',
 'Relendo o capítulo de "{livro}"...',
 'Fascinado por "{livro}"...',
 'Chegando ao fim de um capítulo de "{livro}"...',
-'Perdendo a noção do tempo com "{livro}"...',
+'Perdeu a noção do tempo ao ler "{livro}"...',
 'Voltando ao começo de "{livro}"...',
 'Tentando entender uma passagem difícil de "{livro}"...',
 'Com "{livro}" aberto sobre a mesa...',
@@ -84,7 +82,7 @@ var STATUS_POR_LIVRO = [
 var STATUS_POR_MESA = {
   janela:   ['Olhando pela janela entre uma página e outra...','Iluminando o livro com a luz da janela...'],
   fundo:    ['Escondido entre as prateleiras do fundo...','Na penumbra do fundo da biblioteca...'],
-  corredor: ['Andando pelo corredor e lendo ao mesmo tempo...','Consultando os títulos nas prateleiras...']
+  corredor: ['Andando pelo corredor...','Consultando os títulos nas prateleiras...']
 };
 
 function getStatusAleatorio(sessao) {
@@ -282,7 +280,6 @@ function processarColeta(uid, nome, sessao) {
         }
       });
 
-      // FIX: grava progresso ANTES de conceder itens para evitar duplicatas em race condition
       return dbPut('/biblioteca/progresso/'+fkey(uid)+'/'+mesAtual(), {
         horas_efetivas: totalAgora,
         marcos_processados: marcosProcessados
@@ -318,9 +315,6 @@ function atualizarRanking(uid, nome, horas) {
   });
 }
 
-
-// FIX: deleta a sessão do Firebase ANTES de processar para evitar que chamadas
-// concorrentes (outros browsers no polling de 30s) processem a mesma sessão duas vezes
 function limparExpiradas(ativas) {
   if (!ativas) return Promise.resolve();
   var agora=Date.now(), promessas=[];
