@@ -321,8 +321,7 @@ async function carregarInventario() {
       (icone ? '<img src="' + icone + '" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;">' : '') +
       '<span style="flex:1"><b>' + item.nome + '</b>' + qtd + '</span>' +
       (descricao ?
-        '<span onclick="var i=this.querySelector(\'i\');i.classList.toggle(\'ph-arrow-circle-down\');i.classList.toggle(\'ph-arrow-circle-up\');document.getElementById(\'' + uid_item + '\').classList.toggle(\'aberto\')" style="cursor:pointer;opacity:1;font-size:20px;flex-shrink:0;color:var(--group);"><i class="ph-fill ph-arrow-circle-down"></i></span>'
-      : '') +
+'<span onclick="var i=this.querySelector(\'i\');i.classList.toggle(\'ph-arrow-circle-down\');i.classList.toggle(\'ph-arrow-circle-up\');document.getElementById(\'' + uid_item + '\').classList.toggle(\'aberto\')" class="inv-desc-toggle inv-desc-toggle--bau"><i class="ph-fill ph-arrow-circle-down"></i></span>'      : '') +
       (pode ?
         '<div class="inv-item-btns">' +
         (admin ? '<button onclick="removerUmDoBau(\'' + chave + '\')" class="btn-inv btn-inv-red" title="Remover 1 unidade"><i class="ph ph-minus-circle"></i></button>' : '') +
@@ -454,8 +453,7 @@ async function carregarMochila() {
       (icone ? '<img src="' + icone + '" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;">' : '') +
       '<span style="flex:1"><b>' + item.nome + '</b>' + qtd + '</span>' +
       (descricao ?
-        '<span onclick="var i=this.querySelector(\'i\');i.classList.toggle(\'ph-arrow-circle-down\');i.classList.toggle(\'ph-arrow-circle-up\');document.getElementById(\'' + uid_item + '\').classList.toggle(\'aberto\')" style="cursor:pointer;opacity:0.5;font-size:11px;flex-shrink:0;"><i class="ph-fill ph-arrow-circle-down"></i></span>'
-      : '') +
+'<span onclick="var i=this.querySelector(\'i\');i.classList.toggle(\'ph-arrow-circle-down\');i.classList.toggle(\'ph-arrow-circle-up\');document.getElementById(\'' + uid_item + '\').classList.toggle(\'aberto\')" class="inv-desc-toggle"><i class="ph-fill ph-arrow-circle-down"></i></span>'      : '') +
       (pode && !travada ?
         '<div class="inv-item-btns">' +
         (admin ? '<button onclick="removerUmDaMochila(\'' + chave + '\')" class="btn-inv btn-inv-red" title="Remover 1 unidade"><i class="ph ph-minus-circle"></i></button>' : '') +
