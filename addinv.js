@@ -1,6 +1,7 @@
 (function() {
   var _INVDB = 'https://unsheltered-72d40-default-rtdb.firebaseio.com';
   var STAFF_IDS = [1, 2, 4, 6];
+  var _itemSelecionadoId = null;
 
   function invGetUID() {
     var el = document.querySelector('[name="username"]');
@@ -41,6 +42,7 @@
     var qtd       = parseInt(document.getElementById('inv-qtd').value) || 1;
     var categoria = document.getElementById('inv-categoria').value || 'Outros';
     var valor     = parseInt(document.getElementById('inv-valor').value) || 0;
+    var icone     = document.getElementById('inv-icone') ? document.getElementById('inv-icone').value.trim() : '';
     var inset     = categoria === 'Moldura' ? (document.getElementById('inv-inset').value.trim() || '-18px') : null;
     if (!nome) { invMostrarMsg('err', 'Informe o nome do item.'); return; }
     var btn = document.getElementById('inv-btn');
@@ -56,7 +58,13 @@
             if (invAtual[ks[i]].nome === nome) { chaveEx = ks[i]; break; }
           }
         }
-        var itemData = { nome: nome, descricao: desc, quantidade: qtd, categoria: categoria, valor: valor, origem: 'staff' };
+        var itemData;
+        if (_itemSelecionadoId) {
+          itemData = { nome: nome, item_id: _itemSelecionadoId, quantidade: qtd, categoria: categoria, valor: valor, origem: 'staff' };
+        } else {
+          itemData = { nome: nome, descricao: desc, quantidade: qtd, categoria: categoria, valor: valor, origem: 'staff' };
+          if (icone) itemData.icone = icone;
+        }
         if (inset) itemData.inset = inset;
         var req;
         if (chaveEx) {
@@ -71,12 +79,14 @@
       })
       .then(function() {
         invMostrarMsg('ok');
+        _itemSelecionadoId = null;
         document.getElementById('inv-nome').value = '';
         document.getElementById('inv-desc').value = '';
         document.getElementById('inv-qtd').value = '1';
         document.getElementById('inv-categoria').value = 'Outros';
         document.getElementById('inv-valor').value = '0';
         document.getElementById('inv-inset').value = '-18px';
+        if (document.getElementById('inv-icone')) document.getElementById('inv-icone').value = '';
         window.invToggleInset();
         btn.disabled = false;
       })
@@ -85,10 +95,21 @@
         btn.disabled = false;
       });
   };
-var _catalogoCache = null;
+
+  var _catalogoCache = null;
   function getCatalogo() {
     if (_catalogoCache) return Promise.resolve(_catalogoCache);
     return fetch(_INVDB + '/itens.json').then(function(r){ return r.json(); }).then(function(d){ _catalogoCache = d||{}; return _catalogoCache; });
+  }
+
+  function adicionarCampoIcone() {
+    var insetRow = document.getElementById('inv-inset-row');
+    if (!insetRow || document.getElementById('inv-icone-row')) return;
+    var row = document.createElement('div');
+    row.id = 'inv-icone-row';
+    row.innerHTML = '<label style="font-size:10px;color:#9d8ec0;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:4px;">Ícone (URL)</label>' +
+      '<input id="inv-icone" type="text" placeholder="https://..." style="width:100%;padding:6px 8px;background:#0d0d1a;border:1px solid #4a3f6b;border-radius:4px;color:#e0d6f5;font-size:13px;box-sizing:border-box;">';
+    insetRow.parentElement.insertBefore(row, insetRow);
   }
 
   function iniciarAutocomplete() {
@@ -98,14 +119,17 @@ var _catalogoCache = null;
     lista.style.cssText = 'position:absolute;z-index:9999;background:#0d0d1a;border:1px solid #4a3f6b;border-radius:4px;max-height:200px;overflow-y:auto;width:100%;display:none;top:100%;left:0;';
     input.parentElement.style.position = 'relative';
     input.parentElement.appendChild(lista);
+
     input.addEventListener('input', function() {
+      _itemSelecionadoId = null;
       var q = input.value.trim().toLowerCase();
       if (q.length < 2) { lista.style.display='none'; return; }
       getCatalogo().then(function(cat) {
-        var res = Object.values(cat).filter(function(it){ return it&&it.nome&&it.nome.toLowerCase().indexOf(q)!==-1; }).slice(0,10);
+        var res = Object.entries(cat).filter(function(e){ return e[1]&&e[1].nome&&e[1].nome.toLowerCase().indexOf(q)!==-1; }).slice(0,10);
         if (!res.length) { lista.style.display='none'; return; }
-        lista.innerHTML = res.map(function(it){
-          return '<div class="inv-ac-opt" data-nome="'+it.nome+'" data-desc="'+(it.descricao||'')+'" data-cat="'+(it.categoria||'Outros')+'" data-val="'+(it.valor||0)+'" style="padding:6px 10px;cursor:pointer;font-size:12px;color:#e0d6f5;border-bottom:1px solid #4a3f6b22;display:flex;align-items:center;gap:6px;">'+
+        lista.innerHTML = res.map(function(e){
+          var key=e[0], it=e[1];
+          return '<div class="inv-ac-opt" data-key="'+key+'" data-nome="'+it.nome+'" data-desc="'+(it.descricao||'')+'" data-cat="'+(it.categoria||'Outros')+'" data-val="'+(it.valor||0)+'" data-icone="'+(it.icone||'')+'" style="padding:6px 10px;cursor:pointer;font-size:12px;color:#e0d6f5;border-bottom:1px solid #4a3f6b22;display:flex;align-items:center;gap:6px;">'+
             (it.icone?'<img src="'+it.icone+'" style="width:16px;height:16px;object-fit:contain;">':'')+
             '<span>'+it.nome+'</span><span style="font-size:10px;color:#9d8ec0;">'+it.categoria+'</span></div>';
         }).join('');
@@ -114,10 +138,12 @@ var _catalogoCache = null;
           el.addEventListener('mouseenter', function(){ el.style.background='#1a1a2e'; });
           el.addEventListener('mouseleave', function(){ el.style.background=''; });
           el.addEventListener('click', function(){
+            _itemSelecionadoId = el.dataset.key;
             document.getElementById('inv-nome').value = el.dataset.nome;
             var d=document.getElementById('inv-desc'); if(d) d.value=el.dataset.desc;
             var c=document.getElementById('inv-categoria'); if(c) c.value=el.dataset.cat;
             var v=document.getElementById('inv-valor'); if(v) v.value=el.dataset.val;
+            var ic=document.getElementById('inv-icone'); if(ic) ic.value=el.dataset.icone;
             lista.style.display='none';
             if(typeof invToggleInset==='function') invToggleInset();
           });
@@ -126,8 +152,10 @@ var _catalogoCache = null;
     });
     document.addEventListener('click', function(e){ if(!lista.contains(e.target)&&e.target!==input) lista.style.display='none'; });
   }
-setTimeout(function() {
+
+  setTimeout(function() {
     if (!invIsStaff()) return;
+    adicionarCampoIcone();
     iniciarAutocomplete();
     var calcPainel = document.getElementById('calc-painel');
     var invPainel  = document.getElementById('inv-painel');
