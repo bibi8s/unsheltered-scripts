@@ -425,6 +425,56 @@ function iniciarStatusTicker(sessao, uid) {
 }
 function pararStatusTicker(){ if (_statusTicker){ clearInterval(_statusTicker); _statusTicker=null; } }
 
+var LIMITE_BILHETES_DIA = 2;
+
+function getUsosGlobaisHoje(remetenteUid) {
+  return dbGet('/biblioteca/interacoes-globais/'+diaAtual()+'/'+fkey(remetenteUid)).then(function(d){ return d||{}; });
+}
+function incrementarUsoGlobal(remetenteUid, tipo) {
+  var path = '/biblioteca/interacoes-globais/'+diaAtual()+'/'+fkey(remetenteUid);
+  return dbGet(path).then(function(d){ var u=d||{}; u[tipo]=(u[tipo]||0)+1; return dbPut(path,u); });
+}
+
+function getBilhetesRecebidos(uid) {
+  return dbGet('/biblioteca/bilhetes/'+fkey(uid)).then(function(d){ return d||{}; });
+}
+function contarBilhetesEnviadosHoje(remetenteUid) {
+  return dbGet('/biblioteca/bilhetes-enviados/'+fkey(remetenteUid)+'/'+diaAtual()).then(function(d){ return d||0; });
+}
+function jaEnviouEnergia(remetenteUid, destinatarioUid) {
+  return dbGet('/biblioteca/bilhetes-energia/'+fkey(remetenteUid)+'/'+fkey(destinatarioUid)+'/'+diaAtual()).then(function(d){ return !!d; });
+}
+function enviarBilhete(remetenteUid, remetenteNome, destinatarioUid, mensagem, comEnergia) {
+  return contarBilhetesEnviadosHoje(remetenteUid).then(function(count){
+    if (count >= LIMITE_BILHETES_DIA) { bibToast('Você já enviou '+LIMITE_BILHETES_DIA+' bilhetes hoje.', 4000); return null; }
+    var registrarEnergia = comEnergia
+      ? jaEnviouEnergia(remetenteUid, destinatarioUid).then(function(ja){
+          if (ja) { bibToast('Você já enviou energia para essa pessoa hoje.', 4000); return false; }
+          return dbPut('/biblioteca/bilhetes-energia/'+fkey(remetenteUid)+'/'+fkey(destinatarioUid)+'/'+diaAtual(), true).then(function(){ return true; });
+        })
+      : Promise.resolve(false);
+    return registrarEnergia.then(function(energiaOk){
+      var bilhete = { remetente_uid:remetenteUid, remetente_nome:remetenteNome, mensagem:mensagem, com_energia:energiaOk, energia_resgatada:false, lido:false, ts:Date.now() };
+      return dbPost('/biblioteca/bilhetes/'+fkey(destinatarioUid), bilhete).then(function(){
+        var path='/biblioteca/bilhetes-enviados/'+fkey(remetenteUid)+'/'+diaAtual();
+        return dbGet(path).then(function(c){ return dbPut(path,(c||0)+1); }).then(function(){ return true; });
+      });
+    });
+  });
+}
+function deletarBilhete(uid, bilheteId) {
+  return dbDel('/biblioteca/bilhetes/'+fkey(uid)+'/'+bilheteId);
+}
+function resgatarEnergiaBilhete(uid, bilheteId) {
+  return dbPatch('/biblioteca/bilhetes/'+fkey(uid)+'/'+bilheteId, { energia_resgatada:true }).then(function(){
+    return adicionarEnergia(uid, 5);
+  });
+}
+function marcarBilhetesComoLidos(uid, bilhetes) {
+  var promessas=[];
+  Object.keys(bilhetes).forEach(function(id){ if (bilhetes[id]&&!bilhetes[id].lido) promessas.push(dbPatch('/biblioteca/bilhetes/'+fkey(uid)+'/'+id,{lido:true})); });
+  return Promise.all(promessas);
+}
 
 function registrarEfeitoLog(alvoUid, tipo, remetenteNome) {
   var entry = { tipo: tipo, remetente_nome: remetenteNome, ts: Date.now() };
@@ -440,21 +490,29 @@ function renderCards(ativas, user) {
 
   var minhaSessao=user.logado ? ativas[fkey(user.uid)] : null;
   var euEstouDentro=minhaSessao&&minhaSessao.termina_em>agora;
-  var cdPromise=(user.logado&&euEstouDentro) ? getCooldownsHoje(user.uid) : Promise.resolve({});
+var dataPromise=(user.logado&&euEstouDentro)
+  ? Promise.all([getCooldownsHoje(user.uid), getUsosGlobaisHoje(user.uid)])
+  : Promise.resolve([{},{}]);
 
-  cdPromise.then(function(cd){
+dataPromise.then(function(dataRes){
+  var cd=dataRes[0], usosGlobais=dataRes[1]; 
     el.innerHTML=lista.map(function(s){
       var ehEu=user.logado&&String(s.uid)===String(user.uid);
       var podeInteragir=euEstouDentro&&!ehEu;
       var btns='';
-      if (podeInteragir) {
-        var visiveis=INTERACOES.filter(function(a){ return !(a.id==='atrapalhar'&&s.mesa_id==='fundo'); });
-        btns='<div class="bib-card-acoes">'+
-          visiveis.map(function(a){
-            var usado=temCooldown(cd,s.uid,a.id);
-            return '<button class="bib-card-btn'+(usado?' bib-card-btn-usado':'')+'" data-alvo="'+s.uid+'" data-tipo="'+a.id+'" title="'+a.label+(usado?' (Já usado hoje)':'')+'"'+(usado?' disabled':'')+'>'+a.emoji+'</button>';
-          }).join('')+'</div>';
-      }
+if (podeInteragir) {
+  var visiveis=INTERACOES.filter(function(a){ return !(a.id==='atrapalhar'&&s.mesa_id==='fundo'); });
+  btns='<div class="bib-card-acoes">'+
+    visiveis.map(function(a){
+      var usado=temCooldown(cd,s.uid,a.id);
+      var limiteAtingido=(usosGlobais[a.id]||0)>=2;
+      var off=usado||limiteAtingido;
+      var title=a.label+(usado?' (Já usado nesta pessoa)':limiteAtingido?' (Limite diário atingido)':'');
+      return '<button class="bib-card-btn'+(off?' bib-card-btn-usado':'')+'" data-alvo="'+s.uid+'" data-tipo="'+a.id+'" title="'+title+'"'+(off?' disabled':'')+'>'+a.emoji+'</button>';
+    }).join('')+
+    '<button class="bib-card-btn bib-btn-bilhete" data-alvo="'+s.uid+'" data-nome="'+(s.nome||'u'+s.uid)+'" title="Enviar bilhete"><i class="ph ph-envelope-simple"></i></button>'+
+  '</div>';
+}
       var efeitoLabel=s.mesa_id==='janela'?' · -1 energia/h':s.mesa_id==='fundo'?' · Imune a atrapalhar':s.mesa_id==='corredor'?' · +5% horas':'';
       var statusTxt=s.status||(s.livro?'Lendo "'+s.livro+'"':'Estudando...');
       return '<div class="bib-card'+(ehEu?' bib-card-eu':'')+'">' +
@@ -473,6 +531,7 @@ function renderCards(ativas, user) {
           var acao=INTERACOES.filter(function(a){ return a.id===tipo; })[0]; if (!acao) return;
           btn.disabled=true; btn.classList.add('bib-card-btn-usado');
           marcarCooldown(user.uid,alvoUid,tipo);
+          incrementarUsoGlobal(user.uid, tipo);
           registrarEfeitoLog(alvoUid, tipo, nomeRemetente);
           if (acao.tipo==='energia') {
             adicionarEnergia(alvoUid,acao.valor).then(function(){ bibToast('Energizou! +'+acao.valor+' energia.'); });
@@ -489,6 +548,11 @@ function renderCards(ativas, user) {
         });
       });
     }
+  el.querySelectorAll('.bib-btn-bilhete').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    abrirModalBilhete(user, btn.dataset.alvo, btn.dataset.nome);
+  });
+});
   });
 }
 
@@ -501,7 +565,7 @@ function renderPainelEntrar(user) {
 
   function step1() {
     dbGet('/biblioteca/ativas').then(function(ativas){
-      painel.innerHTML='<div class="bib-sb-titulo">Onde vai sentar?</div><div class="bib-mesas-grid">'+
+      painel.innerHTML='<div class="bib-sb-titulo">Escolha uma mesa antes de começar a estudar.</div><div class="bib-mesas-grid">'+
         MESAS.map(function(m){
           var ocu=contarMesa(ativas,m.id), cheio=m.limite>0&&ocu>=m.limite;
           var hint=m.efeito==='janela'?'-1 energia/h':m.efeito==='fundo'?'imune atrapalhar':m.efeito==='corredor'?'+5% horas':'';
@@ -682,12 +746,14 @@ function renderTabs(user) {
     '<div id="bib-tab-content"></div>'+
     '<div class="bib-botoes-extra">'+
       '<button class="bib-btn-extra" id="bib-btn-ranking" title="Ranking"><i class="fa-solid fa-trophy"></i></button>'+
-      '<button class="bib-btn-extra" id="bib-btn-grupos"  title="Grupos"><i class="fa-solid fa-user-group"></i></button>'+
-    '</div>';
+'<button class="bib-btn-extra" id="bib-btn-grupos"  title="Grupos"><i class="fa-solid fa-user-group"></i></button>'+
+'<button class="bib-btn-extra" id="bib-btn-bilhetes" title="Bilhetes" style="position:relative"><i class="ph ph-envelope"></i><span id="bib-badge-bilhetes" style="display:none;position:absolute;top:-4px;right:-4px;background:#c06060;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;line-height:16px;text-align:center;"></span></button>'+    '</div>';
 
   document.getElementById('bib-btn-ranking').addEventListener('click',function(){ abrirModal('Ranking',function(mel){ renderRanking(mel); }); });
   document.getElementById('bib-btn-grupos').addEventListener('click',function(){ abrirModal('Grupos',function(mel){ renderGrupos(user,mel); }); });
-
+document.getElementById('bib-btn-bilhetes').addEventListener('click',function(){ abrirModal('Bilhetes',function(mel){ renderBilhetes(user,mel); }); });
+atualizarBadgeBilhetes(user.uid);
+  
   sec.querySelectorAll('.bib-tab').forEach(function(btn){
     btn.addEventListener('click',function(){
       sec.querySelectorAll('.bib-tab').forEach(function(b){ b.classList.remove('bib-tab-ativo'); });
@@ -892,6 +958,81 @@ function renderGrupos(user, el) {
   });
 }
 
+
+function atualizarBadgeBilhetes(uid) {
+  var badge=document.getElementById('bib-badge-bilhetes'); if (!badge) return;
+  getBilhetesRecebidos(uid).then(function(bilhetes){
+    var naoLidos=Object.values(bilhetes||{}).filter(function(b){ return b&&!b.lido; }).length;
+    badge.textContent=naoLidos; badge.style.display=naoLidos>0?'inline-block':'none';
+  });
+}
+
+function renderBilhetes(user, el) {
+  el.innerHTML='<p class="bib-tab-info">Carregando...</p>';
+  getBilhetesRecebidos(user.uid).then(function(bilhetes){
+    marcarBilhetesComoLidos(user.uid, bilhetes);
+    atualizarBadgeBilhetes(user.uid);
+    var ids=Object.keys(bilhetes).filter(function(id){ return bilhetes[id]; });
+    if (!ids.length){ el.innerHTML='<p class="bib-tab-info">Nenhum bilhete recebido.</p>'; return; }
+    var lista=ids.map(function(id){ return Object.assign({_id:id},bilhetes[id]); }).sort(function(a,b){ return b.ts-a.ts; });
+    el.innerHTML='<div class="bib-bilhetes-lista">'+
+      lista.map(function(b){
+        return '<div class="bib-bilhete-item'+(b.lido?'':' bib-bilhete-novo')+'">'+
+          '<div class="bib-bilhete-header">'+
+            '<span class="bib-bilhete-remetente">'+b.remetente_nome+'</span>'+
+            '<span class="bib-bilhete-data">'+fmtData(b.ts)+'</span>'+
+          '</div>'+
+          '<div class="bib-bilhete-texto">'+b.mensagem+'</div>'+
+          (b.com_energia&&!b.energia_resgatada
+            ? '<button class="bib-btn-mini bib-resgatar-energia" data-id="'+b._id+'">Resgatar +5 energia</button>'
+            : b.com_energia&&b.energia_resgatada ? '<span class="bib-bilhete-resgatado">Energia resgatada ✓</span>' : '')+
+          '<button class="bib-btn-mini bib-deletar-bilhete" data-id="'+b._id+'" style="color:#c06060;float:right;">Apagar</button>'+
+        '</div>';
+      }).join('')+'</div>';
+    el.querySelectorAll('.bib-resgatar-energia').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        btn.disabled=true;
+        resgatarEnergiaBilhete(user.uid,btn.dataset.id).then(function(){ bibToast('+5 energia resgatada!',3000); renderBilhetes(user,el); });
+      });
+    });
+    el.querySelectorAll('.bib-deletar-bilhete').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        deletarBilhete(user.uid,btn.dataset.id).then(function(){ renderBilhetes(user,el); });
+      });
+    });
+  });
+}
+
+function abrirModalBilhete(user, destinatarioUid, destinatarioNome) {
+  abrirModal('Enviar Bilhete', function(mel){
+    Promise.all([contarBilhetesEnviadosHoje(user.uid), jaEnviouEnergia(user.uid, destinatarioUid)]).then(function(res){
+      var count=res[0], jaEnergia=res[1], restantes=LIMITE_BILHETES_DIA-count;
+      if (restantes<=0){ mel.innerHTML='<p class="bib-tab-info">Você já enviou '+LIMITE_BILHETES_DIA+' bilhetes hoje.</p>'; return; }
+      mel.innerHTML=
+        '<p class="bib-tab-info">Para: '+destinatarioNome+' · '+restantes+' bilhete(s) restante(s) hoje</p>'+
+        '<textarea class="bib-select" id="bib-bilhete-texto" rows="4" maxlength="300" placeholder="Escreva seu bilhete..." style="width:100%;resize:vertical;margin-bottom:8px;box-sizing:border-box;"></textarea>'+
+        (!jaEnergia
+          ? '<label style="display:flex;align-items:center;gap:6px;margin-bottom:10px;cursor:pointer;"><input type="checkbox" id="bib-bilhete-energia"> Incluir +5 energia (resgatável)</label>'
+          : '<p class="bib-tab-info" style="margin-bottom:8px;">Você já enviou energia para essa pessoa hoje.</p>')+
+        '<button class="bib-btn-confirmar" id="bib-bilhete-enviar">Enviar</button>';
+      document.getElementById('bib-bilhete-enviar').addEventListener('click',function(){
+        var texto=document.getElementById('bib-bilhete-texto').value.trim();
+        if (!texto){ bibToast('Escreva algo no bilhete.',3000); return; }
+        var cbEnergia=document.getElementById('bib-bilhete-energia');
+        var comEnergia=!jaEnergia&&cbEnergia&&cbEnergia.checked;
+        mel.innerHTML='<p class="bib-tab-info">Enviando...</p>';
+        getNome(user.uid).then(function(nome){
+          enviarBilhete(user.uid,nome,destinatarioUid,texto,comEnergia).then(function(ok){
+            mel.innerHTML=ok
+              ? '<p class="bib-tab-info">Bilhete enviado!</p>'
+              : '<p class="bib-tab-info">Não foi possível enviar o bilhete.</p>';
+            if (ok) setTimeout(function(){ var m=document.getElementById('bib-modal'); if(m) m.remove(); },1500);
+          });
+        });
+      });
+    });
+  });
+}
 
 function renderAdmin(el) {
   dbGet('/biblioteca/evento').then(function(ev){
