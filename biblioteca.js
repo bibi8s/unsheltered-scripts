@@ -986,7 +986,7 @@ function renderBilhetes(user, el) {
           (b.com_energia&&!b.energia_resgatada
             ? '<button class="bib-btn-mini bib-resgatar-energia" data-id="'+b._id+'">Resgatar +5 energia</button>'
             : b.com_energia&&b.energia_resgatada ? '<span class="bib-bilhete-resgatado">Energia resgatada ✓</span>' : '')+
-          '<button class="bib-btn-mini bib-deletar-bilhete" data-id="'+b._id+'" style="color:#c06060;float:right;">Apagar</button>'+
+          '<button class="bib-btn-mini bib-deletar-bilhete" data-id="'+b._id+'" style="color:#c06060;float:right;"><i class="fa-solid fa-trash"></i></button>'+
         '</div>';
       }).join('')+'</div>';
     el.querySelectorAll('.bib-resgatar-energia').forEach(function(btn){
