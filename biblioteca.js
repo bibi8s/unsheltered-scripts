@@ -6,8 +6,8 @@ if (!_bibEl) return;
 
 var DB              = 'https://unsheltered-72d40-default-rtdb.firebaseio.com';
 var ADMINS          = ['1'];
-var HORA_ABERTURA   = 9;
-var HORA_FECHAMENTO = 20;
+var HORA_ABERTURA   = (window.BIBLIOTECA_CONFIG && window.BIBLIOTECA_CONFIG.hora_abertura)   || 9;
+var HORA_FECHAMENTO = (window.BIBLIOTECA_CONFIG && window.BIBLIOTECA_CONFIG.hora_fechamento) || 20;
 var LIMITE_HORAS_DIA = 6;
 
 var MARCOS = [
