@@ -102,7 +102,13 @@ function dbPut(p, d)   { return fetch(DB+p+'.json', { method:'PUT',   body:JSON.
 function dbPost(p, d)  { return fetch(DB+p+'.json', { method:'POST',  body:JSON.stringify(d) }); }
 function dbDel(p)      { return fetch(DB+p+'.json', { method:'DELETE' }); }
 function fkey(uid)     { return 'u'+String(uid).replace(/^u/i,''); }
-
+  
+function getMeuGrupo(uid) {
+  return dbGet('/biblioteca/membros/'+fkey(uid)+'/grupo_id');
+}
+function setMeuGrupo(uid, gid) {
+  return dbPut('/biblioteca/membros/'+fkey(uid)+'/grupo_id', gid || null);
+}
 
 function getUser() {
   if (typeof _userdata !== 'undefined' && _userdata && _userdata.user_id)
@@ -333,7 +339,6 @@ function limparExpiradas(ativas) {
             return processarColeta(atual.uid,nome,atual).then(function(res){
               if (res.novasRecompensas.length>0)
                 bibToast(nome+' atingiu um marco! '+res.novasRecompensas.map(function(r){ return r.nome; }).join(', '),6000);
-              return sairGrupoSeNecessario(atual.uid, atual.grupo_id);
             });
           });
         });
@@ -343,14 +348,6 @@ function limparExpiradas(ativas) {
   return Promise.all(promessas);
 }
 
-
-function sairGrupoSeNecessario(uid, grupoId) {
-  if (!grupoId) return Promise.resolve();
-  var p = {}; p[fkey(uid)] = null;
-  return dbPatch('/biblioteca/grupos/'+grupoId+'/membros', p).then(function(){
-    return dbPatch('/biblioteca/ativas/'+fkey(uid), { grupo_id: null });
-  });
-}
 
 function criarGrupo(uid, nomeUsuario, nomeGrupo) {
   var membros = {}; membros[fkey(uid)] = { nome: nomeUsuario, uid: uid };
@@ -362,26 +359,32 @@ function criarGrupo(uid, nomeUsuario, nomeGrupo) {
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
-    return dbPatch('/biblioteca/ativas/'+fkey(uid), { grupo_id: d.name }).then(function(){ return d.name; });
+    return setMeuGrupo(uid, d.name).then(function(){ return d.name; });
   });
 }
 
-function entrarGrupo(uid, nomeUsuario, gid, grupoAtual) {
-  if (grupoAtual) {
-    bibToast('Você já está em um grupo. Saia primeiro para entrar em outro.', 4000);
-    return Promise.resolve(null);
-  }
-  var p = {}; p[fkey(uid)] = { nome: nomeUsuario, uid: uid };
-  return dbPatch('/biblioteca/grupos/'+gid+'/membros', p).then(function(){
-    return dbPatch('/biblioteca/ativas/'+fkey(uid), { grupo_id: gid });
+function entrarGrupo(uid, nomeUsuario, gid) {
+  return getMeuGrupo(uid).then(function(grupoAtual){
+    if (grupoAtual) {
+      bibToast('Você já está em um grupo. Saia primeiro para entrar em outro.', 4000);
+      return null;
+    }
+    var p = {}; p[fkey(uid)] = { nome: nomeUsuario, uid: uid };
+    return dbPatch('/biblioteca/grupos/'+gid+'/membros', p)
+      .then(function(){ return setMeuGrupo(uid, gid); })
+      .catch(function(){
+        var rollback = {}; rollback[fkey(uid)] = null;
+        dbPatch('/biblioteca/grupos/'+gid+'/membros', rollback);
+        bibToast('Erro ao entrar no grupo. Tente novamente.', 4000);
+        return null;
+      });
   });
 }
 
 function sairGrupo(uid, gid) {
   var p = {}; p[fkey(uid)] = null;
-  return dbPatch('/biblioteca/grupos/'+gid+'/membros', p).then(function(){
-    return dbPatch('/biblioteca/ativas/'+fkey(uid), { grupo_id: null });
-  });
+  return dbPatch('/biblioteca/grupos/'+gid+'/membros', p)
+    .then(function(){ return setMeuGrupo(uid, null); });
 }
 
 function deletarGrupo(liderUid, gid) {
@@ -391,7 +394,7 @@ function deletarGrupo(liderUid, gid) {
     if (g.membros) {
       Object.keys(g.membros).forEach(function(k){
         var m = g.membros[k]; if (!m) return;
-        promessas.push(dbPatch('/biblioteca/ativas/'+k, { grupo_id: null }));
+        promessas.push(setMeuGrupo(m.uid, null));
       });
     }
     return Promise.all(promessas).then(function(){ return dbDel('/biblioteca/grupos/'+gid); });
@@ -576,7 +579,8 @@ function renderPainelEntrar(user) {
 function confirmarEntrada(user, mesa, livro, horas, custo) {
   var painel=document.getElementById('bib-painel-usuario');
   if (painel) painel.innerHTML='<div class="bib-sb-titulo">Entrando...</div>';
-  getNome(user.uid).then(function(nome){
+  Promise.all([getNome(user.uid), getMeuGrupo(user.uid)]).then(function(res){
+  var nome = res[0], grupoId = res[1] || null;
     getHorasReaisHoje(user.uid).then(function(horasHoje){
       if (horas > LIMITE_HORAS_DIA - horasHoje) {
         bibToast('Limite diário atingido! Restam '+fmtHoras(LIMITE_HORAS_DIA - horasHoje)+' hoje.', 5000);
@@ -587,7 +591,7 @@ function confirmarEntrada(user, mesa, livro, horas, custo) {
         var agora=Date.now();
         var sessao={ uid:user.uid, nome:nome, inicio_em:agora, termina_em:agora+horas*3600000,
           mesa_id:mesa?mesa.id:'central', mesa_label:mesa?mesa.label:'Mesa Central',
-          livro:livro||null, grupo_id:null, interacoes_recebidas:{}, status:null };
+          livro:livro||null, grupo_id:grupoId, interacoes_recebidas:{}, status:null };
         dbPut('/biblioteca/ativas/'+fkey(user.uid),sessao).then(function(){
           renderPainelSessao(user,sessao);
           iniciarStatusTicker(sessao,user.uid);
@@ -624,13 +628,11 @@ function encerrarSessao(user, sessao) {
   if (painel) painel.innerHTML='<div class="bib-sb-titulo">Encerrando...</div>';
   getNome(user.uid).then(function(nome){
     processarColeta(user.uid,nome,sessao).then(function(res){
-      sairGrupoSeNecessario(user.uid, sessao.grupo_id).then(function(){
-        dbDel('/biblioteca/ativas/'+fkey(user.uid)).then(function(){
-          var msg=fmtHoras(res.horasEfetivas)+' registradas'+(res.bonusPct>0?' (bônus total +'+res.bonusPct+'%)':'')+'.';
-          if (res.novasRecompensas.length>0) msg+=' Marco atingido! '+res.novasRecompensas.map(function(r){ return r.nome; }).join(', ')+'!';
-          bibToast(msg,6000);
-          renderPainelEntrar(user); renderSidebarInfo(user); carregarBiblioteca(user);
-        });
+      dbDel('/biblioteca/ativas/'+fkey(user.uid)).then(function(){
+        var msg=fmtHoras(res.horasEfetivas)+' registradas'+(res.bonusPct>0?' (bônus total +'+res.bonusPct+'%)':'')+'.';
+        if (res.novasRecompensas.length>0) msg+=' Marco atingido! '+res.novasRecompensas.map(function(r){ return r.nome; }).join(', ')+'!';
+        bibToast(msg,6000);
+        renderPainelEntrar(user); renderSidebarInfo(user); carregarBiblioteca(user);
       });
     });
   });
@@ -797,18 +799,10 @@ function renderRanking(el) {
 
 
 function renderGrupos(user, el) {
-  dbGet('/biblioteca/ativas/'+fkey(user.uid)).then(function(minhaSessao){
-    if (!minhaSessao||minhaSessao.termina_em<Date.now()){
-      el.innerHTML='<p class="bib-tab-info">Entre na biblioteca para participar de grupos.</p>'; return;
-    }
-    var meuGid = minhaSessao.grupo_id || null;
+  getMeuGrupo(user.uid).then(function(meuGid){
+    meuGid = meuGid || null;
 
     dbGet('/biblioteca/grupos').then(function(grupos){
-      var validos = Object.keys(grupos||{}).filter(function(gid){
-        var g = grupos[gid]; if (!g||!g.membros) return false;
-        return Object.keys(g.membros).filter(function(k){ return g.membros[k]; }).length < 4;
-      });
-
       var html = '<div class="bib-grupos-wrap">';
 
       if (!meuGid) {
@@ -820,19 +814,20 @@ function renderGrupos(user, el) {
         html += '<p class="bib-tab-info bib-grupo-ativo-aviso">Você já está em um grupo. Saia primeiro para entrar em outro.</p>';
       }
 
-      if (validos.length > 0) {
+      var gids = Object.keys(grupos || {});
+      if (gids.length > 0) {
         html += '<div class="bib-grupos-lista">';
-        validos.forEach(function(gid){
+        gids.forEach(function(gid){
           var g = grupos[gid];
           var membros = Object.values(g.membros||{}).filter(Boolean);
           var qtd = membros.length;
+          var cheio = qtd >= 4;
           var bonus = qtd >= 4 ? '+10%' : qtd === 3 ? '+7%' : qtd === 2 ? '+5%' : '+2%';
           var ehMeu = gid === meuGid;
           var ehLider = String(g.lider) === String(user.uid);
-          var nomeGrupo = g.nome || 'Grupo de Estudo';
 
           html += '<div class="bib-grupo-card">'+
-            '<div class="bib-grupo-nome">'+nomeGrupo+'</div>'+
+            '<div class="bib-grupo-nome">'+(g.nome||'Grupo de Estudo')+'</div>'+
             '<div class="bib-grupo-membros">'+membros.map(function(m){ return m.nome; }).join(', ')+'</div>'+
             '<div class="bib-grupo-rodape">'+
               '<span class="bib-grupo-bonus">Bônus: '+bonus+' · '+qtd+'/4</span>';
@@ -843,15 +838,17 @@ function renderGrupos(user, el) {
             } else {
               html += '<button class="bib-btn-mini bib-sair-grupo" data-gid="'+gid+'">Sair</button>';
             }
-          } else if (!meuGid) {
+          } else if (!meuGid && !cheio) {
             html += '<button class="bib-btn-hora bib-entrar-grupo" data-gid="'+gid+'">Entrar</button>';
+          } else if (!meuGid && cheio) {
+            html += '<span class="bib-grupo-cheio">Cheio</span>';
           }
 
           html += '</div></div>';
         });
         html += '</div>';
-      } else if (!meuGid) {
-        html += '<p class="bib-tab-info">Nenhum grupo disponível no momento.</p>';
+      } else {
+        html += '<p class="bib-tab-info">Nenhum grupo criado ainda.</p>';
       }
 
       html += '</div>';
@@ -872,7 +869,7 @@ function renderGrupos(user, el) {
       el.querySelectorAll('.bib-entrar-grupo').forEach(function(btn){
         btn.addEventListener('click', function(){
           getNome(user.uid).then(function(n){
-            entrarGrupo(user.uid, n, btn.dataset.gid, meuGid).then(function(res){
+            entrarGrupo(user.uid, n, btn.dataset.gid).then(function(res){
               if (res !== null) renderGrupos(user, el);
             });
           });
