@@ -5,6 +5,13 @@ async function dbGet(p) { var r = await fetch(DB + p + '.json'); return r.json()
 async function dbPatch(p, d) { await fetch(DB + p + '.json', { method: 'PATCH', body: JSON.stringify(d) }); }
 async function dbPost(p, d) { await fetch(DB + p + '.json', { method: 'POST', body: JSON.stringify(d) }); }
 
+function normalizar(nome) {
+  return String(nome).toLowerCase()
+    .replace(/[àáâãä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i')
+    .replace(/[òóôõö]/g,'o').replace(/[ùúûü]/g,'u').replace(/[ç]/g,'c')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
 function getInvUID() {
   var el = document.getElementById('inv-uid');
   if (el) return el.textContent.trim();
@@ -277,7 +284,9 @@ async function carregarInventario() {
   var pode = podeEditar(uid);
   var r = await fetch(DB + '/inventario/u' + uid + '.json');
   var data = await r.json();
+  var catalogo = await dbGet('/itens') || {};
 
+  
   if (!data || !Object.keys(data).length) {
     el.innerHTML = '<em class="inv-empty">Nenhum item no bau.</em>';
     return;
@@ -297,15 +306,22 @@ async function carregarInventario() {
   var grupos = {};
   ordem.forEach(function(c) { grupos[c] = []; });
 
-  Object.entries(data).forEach(function(entry) {
+Object.entries(data).forEach(function(entry) {
     var chave = entry[0]; var item = entry[1];
     var cat = item.categoria && grupos[item.categoria] ? item.categoria : 'Outros';
     var qtd = item.quantidade && item.quantidade > 1 ? ' (x' + item.quantidade + ')' : '';
+    var itemId = item.item_id || normalizar(item.nome);
+    var dadosCat = catalogo[itemId] || {};
+    var icone = dadosCat.icone || item.icone || '';
+    var descricao = item.descricao || dadosCat.descricao || '';
+    var uid_item = 'item-' + chave;
 
     grupos[cat].push(
       '<div class="inv-item">' +
       '<div class="inv-item-row">' +
-      '<span><b>' + item.nome + '</b>' + qtd + ' ' + (item.descricao || '') + '</span>' +
+      (icone ? '<img src="' + icone + '" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;">' : '') +
+      '<span style="flex:1"><b>' + item.nome + '</b>' + qtd + '</span>' +
+      (descricao ? '<span onclick="document.getElementById(\'' + uid_item + '\').classList.toggle(\'oculto\')" style="cursor:pointer;opacity:0.5;font-size:11px;flex-shrink:0;">✦</span>' : '') +
       (pode ?
         '<div class="inv-item-btns">' +
         (admin ? '<button onclick="removerUmDoBau(\'' + chave + '\')" class="btn-inv btn-inv-red" title="Remover 1 unidade"><i class="ph ph-minus-circle"></i></button>' : '') +
@@ -313,6 +329,7 @@ async function carregarInventario() {
         '</div>'
       : '') +
       '</div>' +
+      '<div id="' + uid_item + '" class="inv-desc oculto">' + descricao + '</div>' +
       renderDurabilidade(item, chave, 'bau', admin) +
       '</div>'
     );
@@ -391,6 +408,7 @@ async function carregarMochila() {
   var travada = await getMochilaTravada(uid);
   var data = await dbGet('/mochila/u' + uid);
   var limite = await getLimiteMochila(uid);
+  var catalogo = await dbGet('/itens') || {};
   var usados = data ? Object.keys(data).length : 0;
   var semanaAtual = getMondayAtual();
 
@@ -411,9 +429,14 @@ async function carregarMochila() {
     return;
   }
 
-  var html = Object.entries(data).map(function(entry) {
+var html = Object.entries(data).map(function(entry) {
     var chave = entry[0]; var item = entry[1];
     var qtd = item.quantidade && item.quantidade > 1 ? ' (x' + item.quantidade + ')' : '';
+    var itemId = item.item_id || normalizar(item.nome);
+    var dadosCat = catalogo[itemId] || {};
+    var icone = dadosCat.icone || item.icone || '';
+    var descricao = item.descricao || dadosCat.descricao || '';
+    var uid_item = 'mochila-' + chave;
     var emCooldown = item.semana && item.semana === semanaAtual;
 
     var btnBau = '';
@@ -427,7 +450,9 @@ async function carregarMochila() {
 
     return '<div class="inv-item">' +
       '<div class="inv-item-row">' +
-      '<span><b>' + item.nome + '</b>' + qtd + ' ' + (item.descricao || '') + '</span>' +
+      (icone ? '<img src="' + icone + '" style="width:32px;height:32px;object-fit:contain;flex-shrink:0;">' : '') +
+      '<span style="flex:1"><b>' + item.nome + '</b>' + qtd + '</span>' +
+      (descricao ? '<span onclick="document.getElementById(\'' + uid_item + '\').classList.toggle(\'oculto\')" style="cursor:pointer;opacity:0.5;font-size:11px;flex-shrink:0;">✦</span>' : '') +
       (pode && !travada ?
         '<div class="inv-item-btns">' +
         (admin ? '<button onclick="removerUmDaMochila(\'' + chave + '\')" class="btn-inv btn-inv-red" title="Remover 1 unidade"><i class="ph ph-minus-circle"></i></button>' : '') +
@@ -435,13 +460,13 @@ async function carregarMochila() {
         '</div>'
       : '') +
       '</div>' +
+      '<div id="' + uid_item + '" class="inv-desc oculto">' + descricao + '</div>' +
       renderDurabilidade(item, chave, 'mochila', admin) +
       '</div>';
   }).join('');
 
   el.innerHTML = html;
 }
-
 async function removerUmDaMochila(chaveItem) {
   if (!isAdmin()) { gringToast('Sem permissao.', true); return; }
   var uid = getInvUID();
