@@ -24,9 +24,9 @@ var MARCOS = [
 
 var MESAS = [
   { id: 'central',  label: 'Mesa Central',            limite: 0, efeito: null },
-  { id: 'janela',   label: 'Perto da Janela',          limite: 4, efeito: 'janela' },
-  { id: 'fundo',    label: 'Mesa do Fundo',            limite: 4, efeito: 'fundo' },
-  { id: 'corredor', label: 'Corredor das Prateleiras', limite: 4, efeito: 'corredor' }
+  { id: 'janela',   label: 'Perto da Janela',          limite: 3, efeito: 'janela' },
+  { id: 'fundo',    label: 'Mesa do Fundo',            limite: 3, efeito: 'fundo' },
+  { id: 'corredor', label: 'Corredor das Prateleiras', limite: 5, efeito: 'corredor' }
 ];
 
 var INTERACOES = [
