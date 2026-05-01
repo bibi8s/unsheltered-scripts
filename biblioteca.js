@@ -510,7 +510,7 @@ if (podeInteragir) {
       var title=a.label+(usado?' (Já usado nesta pessoa)':limiteAtingido?' (Limite diário atingido)':'');
       return '<button class="bib-card-btn'+(off?' bib-card-btn-usado':'')+'" data-alvo="'+s.uid+'" data-tipo="'+a.id+'" title="'+title+'"'+(off?' disabled':'')+'>'+a.emoji+'</button>';
     }).join('')+
-    '<button class="bib-card-btn bib-btn-bilhete" data-alvo="'+s.uid+'" data-nome="'+(s.nome||'u'+s.uid)+'" title="Enviar bilhete"><i class="ph ph-envelope-simple"></i></button>'+
+    '<button class="bib-btn-bilhete" data-alvo="'+s.uid+'" data-nome="'+(s.nome||'u'+s.uid)+'" title="Enviar bilhete"><i class="ph ph-envelope-simple"></i></button>'+
   '</div>';
 }
       var efeitoLabel=s.mesa_id==='janela'?' · -1 energia/h':s.mesa_id==='fundo'?' · Imune a atrapalhar':s.mesa_id==='corredor'?' · +5% horas':'';
@@ -1054,6 +1054,7 @@ function renderAdmin(el) {
 var _pollingBib=null;
 function carregarBiblioteca(user){
   dbGet('/biblioteca/ativas').then(function(ativas){ limparExpiradas(ativas); renderCards(ativas,user); renderBadgeEvento(); });
+  if (user.logado) atualizarBadgeBilhetes(user.uid);
 }
 function renderBadgeEvento(){
   dbGet('/biblioteca/evento').then(function(ev){
