@@ -4,9 +4,7 @@
   var _el = document.getElementById('athenaeumbx');
   if (!_el) return;
 
-  /* ═══════════════════════════════════════════
-     CONFIG
-  ═══════════════════════════════════════════ */
+
   var DB                = 'https://unsheltered-72d40-default-rtdb.firebaseio.com';
   var ADMINS            = ['1'];
   var LIMITE_HORAS_DIA  = 6;
@@ -61,9 +59,7 @@
     return STATUS_GENERICOS[Math.floor(Math.random() * STATUS_GENERICOS.length)];
   }
 
-  /* ═══════════════════════════════════════════
-     FIREBASE REST
-  ═══════════════════════════════════════════ */
+
   function dbGet(p)      { return fetch(DB + p + '.json').then(function(r) { return r.json(); }); }
   function dbPut(p, d)   { return fetch(DB + p + '.json', { method: 'PUT',    body: JSON.stringify(d) }); }
   function dbPatch(p, d) { return fetch(DB + p + '.json', { method: 'PATCH',  body: JSON.stringify(d) }); }
@@ -71,9 +67,7 @@
   function dbDel(p)      { return fetch(DB + p + '.json', { method: 'DELETE' }); }
   function fkey(uid)     { return 'u' + String(uid).replace(/^u/i, ''); }
 
-  /* ═══════════════════════════════════════════
-     USER / UTILS
-  ═══════════════════════════════════════════ */
+
   function getUser() {
     if (typeof _userdata !== 'undefined' && _userdata && _userdata.user_id)
       return { uid: String(_userdata.user_id).trim(), nome: _userdata.username || '', logado: true };
@@ -93,9 +87,7 @@
   }
   function fmtTermina(ms) { return ms <= 0 ? 'conclu\u00eddo' : 'termina em ' + Math.ceil(ms / 3600000) + 'h'; }
 
-  /* ═══════════════════════════════════════════
-     ATRIBUTOS / STATUS / ENERGIA / SALDO / HP
-  ═══════════════════════════════════════════ */
+
   function getAtributos(uid) { return dbGet('/atributos/' + fkey(uid)).then(function(d) { return d || {}; }); }
 
   function getEnergia(uid) {
@@ -138,9 +130,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     HORAS HOJE (cumulativo entre camadas)
-  ═══════════════════════════════════════════ */
+
   function getHorasHoje(uid) {
     return dbGet('/athenaeum/historico/' + fkey(uid)).then(function(hist) {
       if (!hist) return 0;
@@ -155,9 +145,6 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     SESSÃO
-  ═══════════════════════════════════════════ */
   function calcSaida(sessao) {
     var fim = Math.min(Date.now(), sessao.termina_em);
     var horas = Math.max(0, (fim - sessao.inicio_em) / 3600000);
@@ -196,9 +183,6 @@
     return Promise.all(p);
   }
 
-  /* ═══════════════════════════════════════════
-     DUELOS
-  ═══════════════════════════════════════════ */
   function poderAtaque(atr)  { return (atr.forca || 0) + (atr.agilidade || 0) + (atr.destreza || 0); }
   function poderDefesa(atr)  { return (atr.resistencia || 0) + (atr.determinacao || 0) + (atr.sabedoria || 0); }
 
@@ -281,9 +265,6 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     DROP MENSAL TOP 3
-  ═══════════════════════════════════════════ */
   function verificarDropMensal() {
     var mes = mesAnterior();
     var flag = '/athenaeum/drop-processado/' + mes;
@@ -304,9 +285,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     BILHETES
-  ═══════════════════════════════════════════ */
+
   function getBilhetes(uid) { return dbGet('/athenaeum/bilhetes/' + fkey(uid)).then(function(d) { return d || {}; }); }
 
   function enviarBilhete(remUid, remNome, destUid, msg) {
@@ -332,15 +311,11 @@
     return Promise.all(p);
   }
 
-  /* ═══════════════════════════════════════════
-     NOTIFICAÇÕES
-  ═══════════════════════════════════════════ */
+
   function getNotificacoes(uid) { return dbGet('/athenaeum/notificacoes/' + fkey(uid)).then(function(d) { return d || {}; }); }
   function deletarNotif(uid, id) { return dbDel('/athenaeum/notificacoes/' + fkey(uid) + '/' + id); }
 
-  /* ═══════════════════════════════════════════
-     UI HELPERS
-  ═══════════════════════════════════════════ */
+
   function toast(msg, dur) {
     var t = document.getElementById('ath-toast'); if (!t) return;
     t.textContent = msg; t.style.opacity = '1';
@@ -371,9 +346,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     MODAL
-  ═══════════════════════════════════════════ */
+
   function abrirModal(titulo, fn) {
     var ex = document.getElementById('ath-modal'); if (ex) ex.remove();
     var ov = document.createElement('div'); ov.id = 'ath-modal';
@@ -388,9 +361,7 @@
     fn(document.getElementById('ath-mc'));
   }
 
-  /* ═══════════════════════════════════════════
-     RENDER CARDS
-  ═══════════════════════════════════════════ */
+
   var _camadaVis = 'superficie';
 
   function renderCards(ativas, user) {
@@ -451,9 +422,7 @@
     }
   }
 
-  /* ═══════════════════════════════════════════
-     PAINEL ENTRADA
-  ═══════════════════════════════════════════ */
+
   function renderPainelEntrada(user, camadaId, atributos) {
     var painel = document.getElementById('ath-painel-usuario'); if (!painel) return;
     var cam = getCamada(camadaId);
@@ -526,9 +495,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     PAINEL SESSÃO
-  ═══════════════════════════════════════════ */
+
   function renderPainelSessao(user, sessao, atributos) {
     var painel = document.getElementById('ath-painel-usuario'); if (!painel) return;
     var concluida = Date.now() >= sessao.termina_em;
@@ -565,9 +532,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     NAV CAMADAS
-  ═══════════════════════════════════════════ */
+
   function renderNavCamadas(user, camadaSessao, atributos) {
     var nav = document.getElementById('ath-nav-camadas'); if (!nav) return;
     nav.innerHTML = CAMADAS.map(function(c) {
@@ -613,9 +578,7 @@
     carregarPagina(user);
   }
 
-  /* ═══════════════════════════════════════════
-     SIDEBAR INFO
-  ═══════════════════════════════════════════ */
+
   function renderSidebarInfo(user) {
     var el = document.getElementById('ath-sb-info'); if (!el) return;
     Promise.all([getNome(user.uid), getAtributos(user.uid)]).then(function(res) {
@@ -632,9 +595,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     TABS
-  ═══════════════════════════════════════════ */
+
   function renderTabs(user) {
     var sec = document.getElementById('ath-tabs-section'); if (!sec) return;
     var abas = [
@@ -670,9 +631,7 @@
     renderHistorico(user, document.getElementById('ath-tab-content'));
   }
 
-  /* ═══════════════════════════════════════════
-     NOTIFICAÇÕES + BILHETES
-  ═══════════════════════════════════════════ */
+
   function renderNotificacoes(user, el) {
     el.innerHTML = '<p class="ath-tab-info">Carregando...</p>';
     Promise.all([getNotificacoes(user.uid), getBilhetes(user.uid)]).then(function(res) {
@@ -743,9 +702,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     HISTÓRICO
-  ═══════════════════════════════════════════ */
+
   function renderHistorico(user, el) {
     el.innerHTML = '<p class="ath-tab-info">Carregando...</p>';
     dbGet('/athenaeum/historico/' + fkey(user.uid)).then(function(hist) {
@@ -763,9 +720,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     RANK DUELOS
-  ═══════════════════════════════════════════ */
+
   function renderRankDuelos(el) {
     el.innerHTML = '<p class="ath-tab-info">Carregando...</p>';
     dbGet('/athenaeum/ranking-duelos/' + mesAtual()).then(function(rank) {
@@ -787,9 +742,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     BILHETE MODAL
-  ═══════════════════════════════════════════ */
+
   function abrirModalBilhete(user, destUid, destNome) {
     abrirModal('Enviar Bilhete', function(mel) {
       var pathEnv = '/athenaeum/bilhetes-enviados/' + fkey(user.uid) + '/' + diaAtual();
@@ -815,9 +768,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     ADMIN
-  ═══════════════════════════════════════════ */
+
   function renderAdmin(el) {
     el.innerHTML =
       '<div class="ath-sb-titulo">Admin</div>' +
@@ -827,9 +778,7 @@
     });
   }
 
-  /* ═══════════════════════════════════════════
-     POLLING + CARREGAR
-  ═══════════════════════════════════════════ */
+
   var _polling = null;
 
   function carregarPagina(user) {
@@ -840,9 +789,7 @@
     if (user.logado) atualizarBadge(user.uid);
   }
 
-  /* ═══════════════════════════════════════════
-     BOTÃO APARATAR + INIT
-  ═══════════════════════════════════════════ */
+
   function buildUI() {
     var user = getUser();
 
