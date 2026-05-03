@@ -4,7 +4,9 @@
   var _el = document.getElementById('athenaeumbx');
   if (!_el) return;
 
-
+  /* ═══════════════════════════════════════════
+     CONFIG
+  ═══════════════════════════════════════════ */
   var DB                = 'https://unsheltered-72d40-default-rtdb.firebaseio.com';
   var ADMINS            = ['1'];
   var LIMITE_HORAS_DIA  = 6;
@@ -59,7 +61,9 @@
     return STATUS_GENERICOS[Math.floor(Math.random() * STATUS_GENERICOS.length)];
   }
 
-
+  /* ═══════════════════════════════════════════
+     FIREBASE REST
+  ═══════════════════════════════════════════ */
   function dbGet(p)      { return fetch(DB + p + '.json').then(function(r) { return r.json(); }); }
   function dbPut(p, d)   { return fetch(DB + p + '.json', { method: 'PUT',    body: JSON.stringify(d) }); }
   function dbPatch(p, d) { return fetch(DB + p + '.json', { method: 'PATCH',  body: JSON.stringify(d) }); }
@@ -67,7 +71,9 @@
   function dbDel(p)      { return fetch(DB + p + '.json', { method: 'DELETE' }); }
   function fkey(uid)     { return 'u' + String(uid).replace(/^u/i, ''); }
 
-
+  /* ═══════════════════════════════════════════
+     USER / UTILS
+  ═══════════════════════════════════════════ */
   function getUser() {
     if (typeof _userdata !== 'undefined' && _userdata && _userdata.user_id)
       return { uid: String(_userdata.user_id).trim(), nome: _userdata.username || '', logado: true };
@@ -79,7 +85,7 @@
   function mesAnterior(){ var d = new Date(); d.setMonth(d.getMonth() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
   function diaAtual()   { var d = new Date(); return mesAtual() + '-' + String(d.getDate()).padStart(2, '0'); }
   function fmtHoras(h)  { h = Math.max(0, h); var hh = Math.floor(h), mm = Math.round((h - hh) * 60); return mm > 0 ? hh + 'h' + String(mm).padStart(2, '0') : hh + 'h'; }
-  function fmtData(ts)  { var d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); }
+  function fmtData(ts)  { if (!ts || isNaN(ts)) return '\u2014'; var d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); }
   function fmtTimer(ms) {
     ms = Math.max(0, ms);
     var s = Math.floor(ms / 1000), hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
@@ -87,7 +93,9 @@
   }
   function fmtTermina(ms) { return ms <= 0 ? 'conclu\u00eddo' : 'termina em ' + Math.ceil(ms / 3600000) + 'h'; }
 
-
+  /* ═══════════════════════════════════════════
+     ATRIBUTOS / STATUS / ENERGIA / SALDO / HP
+  ═══════════════════════════════════════════ */
   function getAtributos(uid) { return dbGet('/atributos/' + fkey(uid)).then(function(d) { return d || {}; }); }
 
   function getEnergia(uid) {
@@ -130,7 +138,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     HORAS HOJE (cumulativo entre camadas)
+  ═══════════════════════════════════════════ */
   function getHorasHoje(uid) {
     return dbGet('/athenaeum/historico/' + fkey(uid)).then(function(hist) {
       if (!hist) return 0;
@@ -145,6 +155,9 @@
     });
   }
 
+  /* ═══════════════════════════════════════════
+     SESSÃO
+  ═══════════════════════════════════════════ */
   function calcSaida(sessao) {
     var fim = Math.min(Date.now(), sessao.termina_em);
     var horas = Math.max(0, (fim - sessao.inicio_em) / 3600000);
@@ -183,6 +196,9 @@
     return Promise.all(p);
   }
 
+  /* ═══════════════════════════════════════════
+     DUELOS
+  ═══════════════════════════════════════════ */
   function poderAtaque(atr)  { return (atr.forca || 0) + (atr.agilidade || 0) + (atr.destreza || 0); }
   function poderDefesa(atr)  { return (atr.resistencia || 0) + (atr.determinacao || 0) + (atr.sabedoria || 0); }
 
@@ -265,6 +281,9 @@
     });
   }
 
+  /* ═══════════════════════════════════════════
+     DROP MENSAL TOP 3
+  ═══════════════════════════════════════════ */
   function verificarDropMensal() {
     var mes = mesAnterior();
     var flag = '/athenaeum/drop-processado/' + mes;
@@ -285,7 +304,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     BILHETES
+  ═══════════════════════════════════════════ */
   function getBilhetes(uid) { return dbGet('/athenaeum/bilhetes/' + fkey(uid)).then(function(d) { return d || {}; }); }
 
   function enviarBilhete(remUid, remNome, destUid, msg) {
@@ -311,11 +332,15 @@
     return Promise.all(p);
   }
 
-
+  /* ═══════════════════════════════════════════
+     NOTIFICAÇÕES
+  ═══════════════════════════════════════════ */
   function getNotificacoes(uid) { return dbGet('/athenaeum/notificacoes/' + fkey(uid)).then(function(d) { return d || {}; }); }
   function deletarNotif(uid, id) { return dbDel('/athenaeum/notificacoes/' + fkey(uid) + '/' + id); }
 
-
+  /* ═══════════════════════════════════════════
+     UI HELPERS
+  ═══════════════════════════════════════════ */
   function toast(msg, dur) {
     var t = document.getElementById('ath-toast'); if (!t) return;
     t.textContent = msg; t.style.opacity = '1';
@@ -346,7 +371,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     MODAL
+  ═══════════════════════════════════════════ */
   function abrirModal(titulo, fn) {
     var ex = document.getElementById('ath-modal'); if (ex) ex.remove();
     var ov = document.createElement('div'); ov.id = 'ath-modal';
@@ -361,7 +388,9 @@
     fn(document.getElementById('ath-mc'));
   }
 
-
+  /* ═══════════════════════════════════════════
+     RENDER CARDS
+  ═══════════════════════════════════════════ */
   var _camadaVis = 'superficie';
 
   function renderCards(ativas, user) {
@@ -422,7 +451,9 @@
     }
   }
 
-
+  /* ═══════════════════════════════════════════
+     PAINEL ENTRADA
+  ═══════════════════════════════════════════ */
   function renderPainelEntrada(user, camadaId, atributos) {
     var painel = document.getElementById('ath-painel-usuario'); if (!painel) return;
     var cam = getCamada(camadaId);
@@ -486,6 +517,8 @@
         var sessao = { uid: user.uid, nome: nome, inicio_em: agora, termina_em: agora + horas * 3600000, camada: camadaId, livro: livro || null, status: null };
         dbPut('/athenaeum/ativas/' + fkey(user.uid), sessao).then(function() {
           _camadaVis = camadaId;
+          var ativasLocal = {}; ativasLocal[fkey(user.uid)] = sessao;
+          renderCards(ativasLocal, user);
           renderPainelSessao(user, sessao, atributos);
           renderNavCamadas(user, camadaId, atributos);
           iniciarStatusTick(sessao, user.uid);
@@ -495,7 +528,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     PAINEL SESSÃO
+  ═══════════════════════════════════════════ */
   function renderPainelSessao(user, sessao, atributos) {
     var painel = document.getElementById('ath-painel-usuario'); if (!painel) return;
     var concluida = Date.now() >= sessao.termina_em;
@@ -532,7 +567,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     NAV CAMADAS
+  ═══════════════════════════════════════════ */
   function renderNavCamadas(user, camadaSessao, atributos) {
     var nav = document.getElementById('ath-nav-camadas'); if (!nav) return;
     nav.innerHTML = CAMADAS.map(function(c) {
@@ -578,7 +615,9 @@
     carregarPagina(user);
   }
 
-
+  /* ═══════════════════════════════════════════
+     SIDEBAR INFO
+  ═══════════════════════════════════════════ */
   function renderSidebarInfo(user) {
     var el = document.getElementById('ath-sb-info'); if (!el) return;
     Promise.all([getNome(user.uid), getAtributos(user.uid)]).then(function(res) {
@@ -595,7 +634,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     TABS
+  ═══════════════════════════════════════════ */
   function renderTabs(user) {
     var sec = document.getElementById('ath-tabs-section'); if (!sec) return;
     var abas = [
@@ -631,7 +672,9 @@
     renderHistorico(user, document.getElementById('ath-tab-content'));
   }
 
-
+  /* ═══════════════════════════════════════════
+     NOTIFICAÇÕES + BILHETES
+  ═══════════════════════════════════════════ */
   function renderNotificacoes(user, el) {
     el.innerHTML = '<p class="ath-tab-info">Carregando...</p>';
     Promise.all([getNotificacoes(user.uid), getBilhetes(user.uid)]).then(function(res) {
@@ -649,12 +692,12 @@
           var txt;
           if (n.tipo === 'desafiado') {
             txt = n.atacante_venceu
-              ? n.atacante_nome + ' te desafiou e venceu. Voc\u00ea perdeu HP.'
-              : n.atacante_nome + ' te desafiou e perdeu. Voc\u00ea ainda perdeu um pouco de HP.';
+              ? (n.atacante_nome || 'Algu\u00e9m') + ' te desafiou e venceu. Voc\u00ea perdeu HP.'
+              : (n.atacante_nome || 'Algu\u00e9m') + ' te desafiou e perdeu. Voc\u00ea ainda perdeu um pouco de HP.';
           } else {
             txt = n.atacante_venceu
-              ? n.defensor_nome + ' contra-atacou, mas voc\u00ea ainda venceu.'
-              : n.defensor_nome + ' contra-atacou e venceu. Voc\u00ea perdeu HP adicional.';
+              ? (n.defensor_nome || 'Algu\u00e9m') + ' contra-atacou, mas voc\u00ea ainda venceu.'
+              : (n.defensor_nome || 'Algu\u00e9m') + ' contra-atacou e venceu. Voc\u00ea perdeu HP adicional.';
           }
           var podeCa = n.tipo === 'desafiado' && !n.contra_atacado && n.duelo_id;
           html += '<div class="ath-notif-item' + (n.lido ? '' : ' ath-notif-novo') + '">' +
@@ -673,7 +716,7 @@
         bids.sort(function(a, b) { return bilhetes[b].ts - bilhetes[a].ts; }).forEach(function(id) {
           var b = bilhetes[id];
           html += '<div class="ath-bilhete-item' + (b.lido ? '' : ' ath-bilhete-novo') + '">' +
-            '<div class="ath-bilhete-header"><span class="ath-bilhete-rem">' + b.remetente_nome + '</span><span class="ath-bilhete-data">' + fmtData(b.ts) + '</span></div>' +
+            '<div class="ath-bilhete-header"><span class="ath-bilhete-rem">' + (b.remetente_nome || 'Desconhecido') + '</span><span class="ath-bilhete-data">' + fmtData(b.ts) + '</span></div>' +
             '<div class="ath-bilhete-txt">' + b.mensagem + '</div>' +
             '<button class="ath-btn-mini ath-btn-del-bil" data-id="' + id + '" style="color:#c06060;float:right">\u00d7</button>' +
             '</div>';
@@ -702,7 +745,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     HISTÓRICO
+  ═══════════════════════════════════════════ */
   function renderHistorico(user, el) {
     el.innerHTML = '<p class="ath-tab-info">Carregando...</p>';
     dbGet('/athenaeum/historico/' + fkey(user.uid)).then(function(hist) {
@@ -712,7 +757,7 @@
       el.innerHTML = '<div class="ath-hist-lista">' + lista.map(function(s) {
         return '<div class="ath-hist-item">' +
           '<span class="ath-hist-data">' + fmtData(s.inicio_em) + '</span>' +
-          '<span class="ath-hist-galeoes">+' + s.galeoes + 'G</span>' +
+          '<span class="ath-hist-galeoes">+' + (s.galeoes || 0) + 'G</span>' +
           '<span class="ath-hist-det">' + getCamada(s.camada).label + '</span>' +
           (s.livro ? '<span class="ath-hist-det">"' + s.livro + '"</span>' : '') +
           '</div>';
@@ -720,12 +765,14 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     RANK DUELOS
+  ═══════════════════════════════════════════ */
   function renderRankDuelos(el) {
     el.innerHTML = '<p class="ath-tab-info">Carregando...</p>';
     dbGet('/athenaeum/ranking-duelos/' + mesAtual()).then(function(rank) {
       if (!rank) { el.innerHTML = '<p class="ath-tab-info">Sem dados este m\u00eas.</p>'; return; }
-      var lista = Object.values(rank).filter(Boolean).sort(function(a, b) { return b.pontos - a.pontos; }).slice(0, 10);
+      var lista = Object.values(rank).filter(function(p) { return p && p.nome && p.pontos; }).sort(function(a, b) { return b.pontos - a.pontos; }).slice(0, 10);
       var m = mesAtual().split('-');
       el.innerHTML =
         '<div class="ath-ranking">' +
@@ -742,7 +789,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     BILHETE MODAL
+  ═══════════════════════════════════════════ */
   function abrirModalBilhete(user, destUid, destNome) {
     abrirModal('Enviar Bilhete', function(mel) {
       var pathEnv = '/athenaeum/bilhetes-enviados/' + fkey(user.uid) + '/' + diaAtual();
@@ -768,7 +817,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     ADMIN
+  ═══════════════════════════════════════════ */
   function renderAdmin(el) {
     el.innerHTML =
       '<div class="ath-sb-titulo">Admin</div>' +
@@ -778,7 +829,9 @@
     });
   }
 
-
+  /* ═══════════════════════════════════════════
+     POLLING + CARREGAR
+  ═══════════════════════════════════════════ */
   var _polling = null;
 
   function carregarPagina(user) {
@@ -789,7 +842,9 @@
     if (user.logado) atualizarBadge(user.uid);
   }
 
-
+  /* ═══════════════════════════════════════════
+     BOTÃO APARATAR + INIT
+  ═══════════════════════════════════════════ */
   function buildUI() {
     var user = getUser();
 
