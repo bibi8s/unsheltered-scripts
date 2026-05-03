@@ -55,7 +55,6 @@
     return STATUS_GENERICOS[Math.floor(Math.random() * STATUS_GENERICOS.length)];
   }
 
-  /* ─── FIREBASE REST ──────────────────────── */
   function dbGet(p)      { return fetch(DB + p + '.json').then(function(r) { return r.json(); }); }
   function dbPut(p, d)   { return fetch(DB + p + '.json', { method: 'PUT',   body: JSON.stringify(d) }); }
   function dbPatch(p, d) { return fetch(DB + p + '.json', { method: 'PATCH', body: JSON.stringify(d) }); }
@@ -63,7 +62,6 @@
   function dbDel(p)      { return fetch(DB + p + '.json', { method: 'DELETE' }); }
   function fkey(uid)     { return 'u' + String(uid).replace(/^u/i, ''); }
 
-  /* ─── USER / UTILS ───────────────────────── */
   function getUser() {
     if (typeof _userdata !== 'undefined' && _userdata && _userdata.user_id)
       return { uid: String(_userdata.user_id).trim(), nome: _userdata.username || '', logado: true };
@@ -79,7 +77,6 @@
   function fmtTimer(ms)  { ms=Math.max(0,ms); var s=Math.floor(ms/1000),hh=Math.floor(s/3600),mm=Math.floor((s%3600)/60),ss=s%60; return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
   function fmtTermina(ms){ return ms<=0?'conclu\u00eddo':'termina em '+Math.ceil(ms/3600000)+'h'; }
 
-  /* ─── FIREBASE OPS ───────────────────────── */
   function getAtributos(uid) { return dbGet('/atributos/'+fkey(uid)).then(function(d){ return d||{}; }); }
   function getEnergia(uid) {
     return dbGet('/status-perfil/'+fkey(uid)).then(function(d){
@@ -121,12 +118,10 @@
     });
   }
 
-  /* ─── COOLDOWNS ──────────────────────────── */
   function cdPath(tipo, remUid, alvoUid) { return '/athenaeum/cd-'+tipo+'/'+diaAtual()+'/'+fkey(remUid)+'/'+fkey(alvoUid); }
   function verificarCd(tipo, remUid, alvoUid) { return dbGet(cdPath(tipo,remUid,alvoUid)).then(function(d){ return !!d; }); }
   function marcarCd(tipo, remUid, alvoUid)    { return dbPut(cdPath(tipo,remUid,alvoUid), true); }
 
-  /* ─── HORAS HOJE ─────────────────────────── */
   function getHorasHoje(uid) {
     return dbGet('/athenaeum/historico/'+fkey(uid)).then(function(hist){
       if (!hist) return 0;
@@ -141,7 +136,6 @@
     });
   }
 
-  /* ─── SESSÃO ─────────────────────────────── */
   function calcSaida(sessao) {
     var fim=Math.min(Date.now(),sessao.termina_em);
     var horas=Math.max(0,(fim-sessao.inicio_em)/3600000);
@@ -172,7 +166,6 @@
     return Promise.all(p);
   }
 
-  /* ─── DUELOS ─────────────────────────────── */
   function poderAtaque(a){ return (a.forca||0)+(a.agilidade||0)+(a.destreza||0); }
   function poderDefesa(a){ return (a.resistencia||0)+(a.determinacao||0)+(a.sabedoria||0); }
 
@@ -270,7 +263,6 @@
     return dbGet(path).then(function(d){ return dbPut(path,{ nome:nome, pontos:((d&&d.pontos)||0)+1, uid:uid }); });
   }
 
-  /* ─── DROP MENSAL ────────────────────────── */
   function verificarDropMensal() {
     var mes=mesAnterior(), flag='/athenaeum/drop-processado/'+mes;
     return dbGet(flag).then(function(ok){
@@ -290,7 +282,6 @@
     });
   }
 
-  /* ─── BILHETES ───────────────────────────── */
   function getBilhetes(uid){ return dbGet('/athenaeum/bilhetes/'+fkey(uid)).then(function(d){ return d||{}; }); }
   function enviarBilhete(remUid, remNome, destUid, msg) {
     var pathEnv='/athenaeum/bilhetes-enviados/'+fkey(remUid)+'/'+diaAtual();
@@ -310,11 +301,9 @@
     return Promise.all(p);
   }
 
-  /* ─── NOTIFICAÇÕES ───────────────────────── */
   function getNotificacoes(uid){ return dbGet('/athenaeum/notificacoes/'+fkey(uid)).then(function(d){ return d||{}; }); }
   function deletarNotif(uid,id){ return dbDel('/athenaeum/notificacoes/'+fkey(uid)+'/'+id); }
 
-  /* ─── UI HELPERS ─────────────────────────── */
   function toast(msg, dur) {
     var t=document.getElementById('ath-toast'); if (!t) return;
     t.textContent=msg; t.style.opacity='1';
@@ -350,7 +339,6 @@
     });
   }
 
-  /* ─── MODAL ──────────────────────────────── */
   function abrirModal(titulo, fn) {
     var ex=document.getElementById('ath-modal'); if (ex) ex.remove();
     var ov=document.createElement('div'); ov.id='ath-modal';
@@ -383,7 +371,6 @@
     });
   }
 
-  /* ─── TOPBAR ─────────────────────────────── */
   var _camadaVis='superficie';
   var _atrCache=null;
   var _sessaoCache=null;
@@ -394,19 +381,16 @@
     var int=atributos?(atributos.inteligencia||0):0;
     var emSessao=sessao&&sessao.termina_em>Date.now();
 
-    // Info usuario
     var infoHtml=user.logado
       ? '<div class="ath-top-info"><span class="ath-top-nome">'+( user.nome||'u'+user.uid)+'</span><span class="ath-top-int">INT '+int+'</span></div>'
       : '<div class="ath-top-info"></div>';
 
-    // Nav camadas
     var navHtml='<div class="ath-top-nav">'+CAMADAS.map(function(c){
       var pode=int>=c.req_int, ativo=c.id===_camadaVis;
       return '<button class="ath-top-nav-btn'+(ativo?' ath-tnav-ativo':'')+((!pode)?' ath-tnav-bloq':'')+'"'+
         (!pode?' disabled title="'+c.desc+'"':'')+' data-camada="'+c.id+'">'+c.label+'</button>';
     }).join('')+'</div>';
 
-    // Sessão
     var sessaoHtml='';
     if (user.logado){
       if (emSessao){
@@ -422,7 +406,6 @@
       }
     }
 
-    // Ações
     var acoesHtml='<div class="ath-top-acoes">';
     if (user.logado){
       acoesHtml+=
@@ -436,7 +419,6 @@
 
     top.innerHTML=infoHtml+navHtml+sessaoHtml+acoesHtml;
 
-    // Nav eventos
     top.querySelectorAll('.ath-top-nav-btn:not([disabled]):not(.ath-tnav-ativo)').forEach(function(btn){
       btn.addEventListener('click',function(){
         var novaCam=btn.dataset.camada;
@@ -493,7 +475,6 @@
     carregarPagina(user);
   }
 
-  /* ─── MODAL ENTRADA ──────────────────────── */
   function abrirModalEntrada(user, camadaId, atributos) {
     abrirModal('Entrar \u2014 '+getCamada(camadaId).label,function(mel){
       var cam=getCamada(camadaId);
@@ -575,7 +556,6 @@
     });
   }
 
-  /* ─── RENDER CARDS ───────────────────────── */
   function renderCards(ativas, user) {
     var el=document.getElementById('ath-cards'); if (!el) return;
     var agora=Date.now();
@@ -631,7 +611,6 @@
     }
   }
 
-  /* ─── NOTIFICAÇÕES ───────────────────────── */
   function renderNotificacoes(user, el) {
     el.innerHTML='<p class="ath-tab-info">Carregando...</p>';
     Promise.all([getNotificacoes(user.uid),getBilhetes(user.uid)]).then(function(res){
@@ -708,7 +687,6 @@
     });
   }
 
-  /* ─── HISTÓRICO ──────────────────────────── */
   function renderHistorico(user, el) {
     el.innerHTML='<p class="ath-tab-info">Carregando...</p>';
     dbGet('/athenaeum/historico/'+fkey(user.uid)).then(function(hist){
@@ -726,7 +704,6 @@
     });
   }
 
-  /* ─── RANK DUELOS ────────────────────────── */
   function renderRankDuelos(el) {
     el.innerHTML='<p class="ath-tab-info">Carregando...</p>';
     dbGet('/athenaeum/ranking-duelos/'+mesAtual()).then(function(rank){
@@ -745,7 +722,6 @@
     });
   }
 
-  /* ─── BILHETE MODAL ──────────────────────── */
   function abrirModalBilhete(user, destUid, destNome) {
     abrirModal('Enviar Bilhete',function(mel){
       var pathEnv='/athenaeum/bilhetes-enviados/'+fkey(user.uid)+'/'+diaAtual();
@@ -771,7 +747,6 @@
     });
   }
 
-  /* ─── ADMIN ──────────────────────────────── */
   function renderAdmin(el) {
     el.innerHTML='<div class="ath-sb-titulo">Admin</div>'+
       '<button class="ath-btn-confirmar" id="ath-adm-drop">Processar drop do m\u00eas anterior</button>';
@@ -780,7 +755,6 @@
     });
   }
 
-  /* ─── POLLING ────────────────────────────── */
   var _polling=null;
   function carregarPagina(user) {
     dbGet('/athenaeum/ativas').then(function(ativas){
@@ -789,7 +763,6 @@
     if (user.logado) atualizarBadge(user.uid);
   }
 
-  /* ─── BUILD + INIT ───────────────────────── */
   function buildUI() {
     var user=getUser();
     _el.innerHTML=
@@ -800,7 +773,7 @@
           '<div class="ath-entrada-subtitulo">Acervo Restrito</div>'+
           '<div class="ath-entrada-titulo">Athenaeum</div>'+
           '<div class="ath-entrada-linha"></div>'+
-          '<p class="ath-entrada-desc">Conhecimento tem um pre\u00e7o.<br>Apenas os dignos avan\u00e7am.</p>'+
+          '<p class="ath-entrada-desc">Conhecimento tem um preço.<br>Apenas bruxos adultos podem avançar.</p>'+
           '<button id="ath-btn-aparatar" class="ath-btn-aparatar">Aparatar</button>'+
         '</div>'+
       '</div>'+
