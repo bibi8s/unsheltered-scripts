@@ -13,7 +13,7 @@
 
   var CAMADAS = [
     { id: 'superficie', label: 'Superf\u00edcie', req_int: 0,  gph: 50,  eph: 4, duelo: true,  energia_int: true,  desc: 'Aberta a todos.' },
-    { id: 'subsolo',    label: 'Subsolo',         req_int: 5,  gph: 75,  eph: 5, duelo: false, energia_int: false, desc: 'Requer 5+ Intelig\u00eancia.' },
+    { id: 'subsolo',    label: 'Subsolo',         req_int: 5,  gph: 75,  eph: 5, duelo: true, energia_int: true, desc: 'Requer 5+ Intelig\u00eancia.' },
     { id: 'profundeza', label: 'Profundeza',       req_int: 10, gph: 100, eph: 7, duelo: true,  energia_int: true,  desc: 'Requer 10+ Intelig\u00eancia.' }
   ];
 
