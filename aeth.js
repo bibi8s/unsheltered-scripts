@@ -762,11 +762,29 @@
     });
     if (user.logado) atualizarBadge(user.uid);
   }
+function iniciarListenerAtivas(user) {
+  var es = new EventSource(DB + '/athenaeum/ativas.json');
 
+  es.addEventListener('put', function(e) {
+    var ativas = JSON.parse(e.data).data;
+    limparExpiradas(ativas);
+    renderCards(ativas, user);
+    if (user.logado) atualizarBadge(user.uid);
+  });
+
+  es.addEventListener('patch', function(e) {
+    dbGet('/athenaeum/ativas').then(function(ativas) {
+      limparExpiradas(ativas);
+      renderCards(ativas, user);
+    });
+  });
+
+  return es;
+}
   function buildUI() {
     var user=getUser();
     _el.innerHTML=
-      // Tela de entrada
+  
       '<div id="ath-entrada">'+
         '<div id="ath-entrada-bg"></div>'+
         '<div id="ath-entrada-conteudo">'+
@@ -777,7 +795,7 @@
           '<button id="ath-btn-aparatar" class="ath-btn-aparatar">Aparatar</button>'+
         '</div>'+
       '</div>'+
-      // UI principal
+    
       '<div id="ath-wrapper" style="display:none">'+
         '<div id="ath-topbar"></div>'+
         '<div id="ath-main">'+
@@ -817,10 +835,9 @@
     } else {
       renderTopBar(user,null,{});
     }
-    carregarPagina(user);
-    _polling=setInterval(function(){ carregarPagina(user); },30000);
-  }
-
+carregarPagina(user);
+_polling = iniciarListenerAtivas(user);
+} 
   buildUI();
 
 })();
