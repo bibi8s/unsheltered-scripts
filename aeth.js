@@ -25,6 +25,7 @@
 
   var DANO = {
     superficie: { perd: 0.10, venc: 0.02 },
+    subsolo:    { perd: 0.15, venc: 0.05 },
     profundeza:  { perd: 0.20, venc: 0.08 }
   };
 
