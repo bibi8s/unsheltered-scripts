@@ -438,7 +438,145 @@ function buscarVassoura(uid) {
     return vassouras[keys[0]];
   });
 }
+// ── busca no cadastro próprio primeiro, cai nos caminhos do fórum se não tiver ──
+function buscarDadosJogador(rawUid) {
+  return fbGet('/quadribol/jogadores/u'+rawUid).then(function(reg) {
+    if (reg && reg.atributos) return reg;
+    return Promise.all([
+      fbGet('/saldos/u'+rawUid),
+      fbGet('/atributos/u'+rawUid),
+      buscarVassoura(rawUid),
+      fbGet('/maestria/u'+rawUid)
+    ]).then(function(r) {
+      return {
+        nome:      r[0] && r[0].nome ? r[0].nome : 'u'+rawUid,
+        foto:      null,
+        atributos: r[1] || {},
+        vassoura:  r[2] || {nome:'Vassoura Padrão de Hogwarts', bonus:1},
+        maestria:  r[3] || {quadribol:0,artilheiro:0,defesa:0,manobras:0,pomo:0}
+      };
+    });
+  });
+}
 
+// ── aba de cadastro de jogadores no admin ──────────────────────────────────────
+function renderAdminJogadores() {
+  var $div = $('#quad-adm-jogadores').empty();
+  var attrList = ['forca','resistencia','agilidade','destreza','sabedoria','carisma','inteligencia','determinacao'];
+  var attrLabel = {forca:'Força',resistencia:'Resistência',agilidade:'Agilidade',destreza:'Destreza',sabedoria:'Sabedoria',carisma:'Carisma',inteligencia:'Inteligência',determinacao:'Determinação'};
+  var maestList = ['quadribol','artilheiro','defesa','manobras','pomo'];
+  var maestLabel = {quadribol:'Quadribol %',artilheiro:'Artilharia',defesa:'Defesa',manobras:'Manobras',pomo:'Pomo'};
+
+  function montar(uid, dados) {
+    dados = dados || {};
+    var attrs = dados.atributos || {};
+    var maest = dados.maestria  || {};
+    var vass  = dados.vassoura  || {};
+    var attrGrid = attrList.map(function(a) {
+      return '<div><div class="quad-slot-label">'+attrLabel[a]+'</div>'+
+        '<input type="number" class="quad-input quad-jog-attr" data-attr="'+a+'" min="1" max="25" value="'+(attrs[a]||10)+'"></div>';
+    }).join('');
+    var maestGrid = maestList.map(function(k) {
+      var max = k==='quadribol' ? 100 : 5;
+      return '<div><div class="quad-slot-label">'+maestLabel[k]+'</div>'+
+        '<input type="number" class="quad-input quad-jog-maest" data-maest="'+k+'" min="0" max="'+max+'" value="'+(maest[k]||0)+'"></div>';
+    }).join('');
+
+    $div.html(
+      '<div class="quad-card">'+
+        '<div class="quad-sec-title">cadastrar jogador</div>'+
+        '<div style="display:flex;gap:8px;margin-bottom:8px;">'+
+          '<div style="flex:1;"><div class="quad-slot-label">uid</div>'+
+            '<input type="text" id="quad-jog-uid" class="quad-input" placeholder="uid" value="'+(uid||'')+'">'+
+            '<div id="quad-jog-preview" class="quad-slot-preview">'+(dados.nome||'')+'</div>'+
+          '</div>'+
+          '<button type="button" id="quad-jog-buscar" class="quad-btn quad-btn-ghost" style="align-self:flex-end;">buscar</button>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">'+
+          '<div style="flex:1;"><div class="quad-slot-label">url da foto</div>'+
+            '<input type="text" id="quad-jog-foto" class="quad-input" placeholder="https://..." value="'+(dados.foto||'')+'"></div>'+
+          '<div id="quad-jog-foto-prev" style="width:56px;height:56px;border-radius:8px;overflow:hidden;border:var(--quad-borda2);background:var(--quad-fnd-tab);flex-shrink:0;">'+
+            (dados.foto?'<img src="'+dados.foto+'" style="width:100%;height:100%;object-fit:cover;">':'')+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-bottom:10px;">'+
+          '<div style="flex:1;"><div class="quad-slot-label">vassoura</div>'+
+            '<input type="text" id="quad-jog-vass-nome" class="quad-input" placeholder="nome" value="'+(vass.nome||'')+'"></div>'+
+          '<div style="flex:0 0 64px;"><div class="quad-slot-label">bônus</div>'+
+            '<input type="number" id="quad-jog-vass-bonus" class="quad-input" min="0" max="10" value="'+(vass.bonus||1)+'"></div>'+
+        '</div>'+
+        '<div class="quad-slot-label" style="margin-bottom:6px;">atributos</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">'+attrGrid+'</div>'+
+        '<div class="quad-slot-label" style="margin-bottom:6px;">maestria</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px;">'+maestGrid+'</div>'+
+        '<div style="display:flex;gap:8px;">'+
+          '<button type="button" id="quad-jog-salvar" class="quad-btn quad-btn-primary" style="flex:1;">salvar</button>'+
+          '<button type="button" id="quad-jog-limpar" class="quad-btn quad-btn-ghost">novo</button>'+
+        '</div>'+
+        '<div id="quad-jog-msg" class="quad-muted" style="margin-top:6px;font-size:12px;"></div>'+
+      '</div>'+
+      '<div class="quad-card" style="margin-top:8px;">'+
+        '<div class="quad-sec-title">cadastrados</div>'+
+        '<div id="quad-jog-lista"><p class="quad-muted">carregando...</p></div>'+
+      '</div>'
+    );
+
+    $('#quad-jog-foto').on('blur', function() {
+      var url = $(this).val().trim();
+      $('#quad-jog-foto-prev').html(url?'<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;">':'');
+    });
+
+    $('#quad-jog-buscar').on('click', function() {
+      var rawUid = $('#quad-jog-uid').val().trim(); if (!rawUid) return;
+      buscarDadosJogador(rawUid).then(function(d) { montar(rawUid, d); $('#quad-jog-uid').val(rawUid); });
+    });
+
+    $('#quad-jog-salvar').on('click', function() {
+      var rawUid = $('#quad-jog-uid').val().trim();
+      if (!rawUid) { alert('Informe o uid.'); return; }
+      var novosAttrs = {}; $('.quad-jog-attr').each(function(){ novosAttrs[$(this).data('attr')] = parseInt($(this).val())||10; });
+      var novosMaest = {}; $('.quad-jog-maest').each(function(){ novosMaest[$(this).data('maest')] = parseInt($(this).val())||0; });
+      var d2 = {
+        nome:       $('#quad-jog-preview').text() || 'u'+rawUid,
+        foto:       $('#quad-jog-foto').val().trim() || null,
+        vassoura:   {nome:$('#quad-jog-vass-nome').val().trim()||'Vassoura Padrão', bonus:parseInt($('#quad-jog-vass-bonus').val())||1},
+        atributos:  novosAttrs,
+        maestria:   novosMaest,
+        atualizado: Date.now()
+      };
+      fbPut('/quadribol/jogadores/u'+rawUid, d2).then(function() {
+        $('#quad-jog-msg').text('salvo!');
+        carregarLista();
+      });
+    });
+
+    $('#quad-jog-limpar').on('click', function() { montar(null, null); });
+    carregarLista();
+  }
+
+  function carregarLista() {
+    fbGet('/quadribol/jogadores').then(function(jogadores) {
+      var $lista = $('#quad-jog-lista').empty();
+      if (!jogadores || !Object.keys(jogadores).length) { $lista.html('<p class="quad-muted">nenhum cadastrado.</p>'); return; }
+      Object.keys(jogadores).sort().forEach(function(uid) {
+        var j = jogadores[uid];
+        var thumb = j.foto
+          ? '<img src="'+j.foto+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;margin-right:8px;border:var(--quad-borda);flex-shrink:0;">'
+          : '<div style="width:36px;height:36px;border-radius:50%;background:var(--quad-fnd-tab);margin-right:8px;flex-shrink:0;"></div>';
+        var row = $('<div class="quad-player-row" style="cursor:pointer;">').html(
+          thumb+
+          '<div style="flex:1;"><div class="quad-player-nome">'+j.nome+'</div>'+
+          '<div class="quad-player-meta">'+(j.vassoura?j.vassoura.nome+' +'+j.vassoura.bonus:'')+'</div></div>'+
+          '<button type="button" class="quad-btn quad-btn-ghost quad-btn-sm">editar</button>'
+        );
+        row.on('click', function() { montar(uid.replace('u',''), j); $('#quad-jog-uid').val(uid.replace('u','')); });
+        $lista.append(row);
+      });
+    });
+  }
+
+  montar(null, null);
+}
 // ─── ENCERRADA ─────────────────────────────────────────────────────────────────
 
 function renderEncerrada(match) {
