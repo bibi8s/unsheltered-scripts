@@ -425,7 +425,7 @@ function iniciarStatusTicker(sessao, uid) {
 }
 function pararStatusTicker(){ if (_statusTicker){ clearInterval(_statusTicker); _statusTicker=null; } }
 
-var LIMITE_BILHETES_DIA = 2;
+var LIMITE_BILHETES_DIA = 4;
 
 function getUsosGlobaisHoje(remetenteUid) {
   return dbGet('/biblioteca/interacoes-globais/'+diaAtual()+'/'+fkey(remetenteUid)).then(function(d){ return d||{}; });
