@@ -11,14 +11,14 @@ var HORA_FECHAMENTO = (window.BIBLIOTECA_CONFIG && window.BIBLIOTECA_CONFIG.hora
 var LIMITE_HORAS_DIA = 6;
 
 var MARCOS = [
-  { horas: 12,  recompensas: [{ nome: '✦ Pontos da Casa +5',  descricao: 'Conquistado por 12h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Outros', valor: 0 }] },
-  { horas: 24,  recompensas: [{ nome: '✦ Pontos da Casa +5',  descricao: 'Conquistado por 24h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Outros', valor: 0 }] },
-  { horas: 42,  recompensas: [{ nome: '✦ Pontos da Casa +5',  descricao: 'Conquistado por 42h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Outros', valor: 0 }] },
-  { horas: 70,  recompensas: [{ nome: '✦ Pontos da Casa +10', descricao: 'Conquistado por 70h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Outros', valor: 0 }] },
-  { horas: 80,  recompensas: [{ nome: '✦ Pontos da Casa +10', descricao: 'Conquistado por 80h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Outros', valor: 0 }] },
+  { horas: 12,  recompensas: [{ nome: '✦ Pontos da Casa +5',  descricao: 'Conquistado por 12h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Off-Game', valor: 0 }] },
+  { horas: 24,  recompensas: [{ nome: '✦ Pontos da Casa +5',  descricao: 'Conquistado por 24h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Off-Game', valor: 0 }] },
+  { horas: 42,  recompensas: [{ nome: '✦ Pontos da Casa +5',  descricao: 'Conquistado por 42h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Off-Game', valor: 0 }] },
+  { horas: 70,  recompensas: [{ nome: '✦ Pontos da Casa +10', descricao: 'Conquistado por 70h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Off-Game', valor: 0 }] },
+  { horas: 80,  recompensas: [{ nome: '✦ Pontos da Casa +10', descricao: 'Conquistado por 80h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Off-Game', valor: 0 }] },
   { horas: 100, recompensas: [
-    { nome: '✦ Pontos da Casa +15', descricao: 'Conquistado por 100h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Outros', valor: 0 },
-    { nome: '✦ Atributo Resgatável', descricao: 'Pode ser trocado por +1 em Inteligência, Sabedoria ou Determinação.', categoria: 'Outros', valor: 0 }
+    { nome: '✦ Pontos da Casa +15', descricao: 'Conquistado por 100h de estudo na biblioteca. Precisa ser resgatado no tópico de pontos para a casa. | Uso Único.', categoria: 'Off-Game', valor: 0 },
+    { nome: '✦ Atributo Resgatável', descricao: 'Pode ser trocado por +1 em Inteligência, Sabedoria ou Determinação.', categoria: 'Off-Game', valor: 0 }
   ]}
 ];
 
