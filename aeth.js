@@ -18,9 +18,9 @@
   ];
 
   var BG_CAMADAS = {
-    superficie: 'url("https://i.imgur.com/auZ0VuZ.jpeg")',
-    subsolo:    'url("https://i.imgur.com/0VTPvAi.jpeg")',
-    profundeza: 'url("https://i.imgur.com/aW1XhTA.jpeg")'
+    superficie: 'url("https://i.imgur.com/b7fe7Ve.jpeg")',
+    subsolo:    'url("https://i.imgur.com/Bf5pPYC.jpeg")',
+    profundeza: 'url("https://i.imgur.com/Ud5sE0Q.jpeg")'
   };
 
   var DANO = {
