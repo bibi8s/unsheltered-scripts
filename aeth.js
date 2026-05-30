@@ -151,14 +151,15 @@
     }));
     return Promise.all(p).then(function(){ return calc; });
   }
+
   function limparExpiradas(ativas) {
     if (!ativas) return Promise.resolve();
     var agora=Date.now(), p=[];
     Object.keys(ativas).forEach(function(k){
       var s=ativas[k];
-      if (!s||!s.termina_em||agora<=s.termina_em) return;
+      if (!s||!s.termina_em||agora<=s.termina_em||s.encerrando) return;
       p.push(dbGet('/athenaeum/ativas/'+k).then(function(atual){
-        if (!atual||atual.termina_em>agora) return;
+        if (!atual||atual.termina_em>agora||atual.encerrando) return;
         return dbDel('/athenaeum/ativas/'+k).then(function(){
           return getNome(atual.uid).then(function(nome){ return processarSaida(atual.uid,nome,atual); });
         });
@@ -167,13 +168,28 @@
     return Promise.all(p);
   }
 
-  function poderAtaque(a){ return (a.forca||0)+(a.agilidade||0)+(a.destreza||0); }
-  function poderDefesa(a){ return (a.resistencia||0)+(a.determinacao||0)+(a.sabedoria||0); }
+  function poderAtaque(a) {
+    return (a.inteligencia || 0) + (a.determinacao || 0);
+  }
+  function poderDefesa(a) {
+    return Math.round(((a.resistencia || 0) + (a.determinacao || 0) + (a.inteligencia || 0)) * 1.5);
+  }
 
   function resolverCombate(atrA, atrD, bonusD) {
-    var pA = poderAtaque(atrA) * (0.75 + Math.random() * 0.5);
-    var pD = poderDefesa(atrD) * (1 + (bonusD||0)) * (0.75 + Math.random() * 0.5);
-    return { venceu: pA > pD, pA: Math.round(pA), pD: Math.round(pD) };
+    var dado1 = Math.floor(Math.random() * 20) + 1;
+    var dado2 = Math.floor(Math.random() * 20) + 1;
+    var baseAtk = poderAtaque(atrA);
+    var baseDef = poderDefesa(atrD);
+    var pA = baseAtk + dado1;
+    var pD = Math.round(baseDef * (1 + (bonusD || 0))) + dado2;
+    return {
+      venceu: pA > pD,
+      pA: pA, pD: pD,
+      baseAtk: baseAtk, baseDef: baseDef,
+      dado1: dado1, dado2: dado2,
+      bonusD: bonusD || 0,
+      atrA: atrA, atrD: atrD
+    };
   }
 
   function executarDuelo(user, alvoUid, alvoNome, camadaId) {
@@ -215,7 +231,14 @@
                 dano_sofrido:danoDefensor,
                 camada:camadaId, lido:false, ts:Date.now()
               })
-            ]).then(function(){ return { atacVenceu:atacVenceu, danoAtacante:danoAtacante, danoDefensor:danoDefensor, pA:combate.pA, pD:combate.pD }; });
+            ]).then(function(){
+              return {
+                atacVenceu:atacVenceu,
+                danoAtacante:danoAtacante, danoDefensor:danoDefensor,
+                combate:combate,
+                nomeOponente:alvoNome
+              };
+            });
           });
         });
       });
@@ -253,7 +276,14 @@
               dano_sofrido:danoAtacante,
               lido:false, ts:Date.now()
             })
-          ]).then(function(){ return { atacVenceu:atacVenceu, danoDefensor:danoDefensor, danoAtacante:danoAtacante, pA:combate.pA, pD:combate.pD }; });
+          ]).then(function(){
+            return {
+              atacVenceu:atacVenceu,
+              danoDefensor:danoDefensor, danoAtacante:danoAtacante,
+              combate:combate,
+              nomeOponente:duelo.atacante_nome
+            };
+          });
         });
       });
     });
@@ -354,20 +384,51 @@
     fn(document.getElementById('ath-mc'));
   }
 
-  function mostrarResultadoDuelo(venceu, danoMeu, danoOponente, nomeOponente, pAtk, pDef) {
-    abrirModal('Resultado do Duelo',function(mel){
-      var expAtk = 'Ataque: '+pAtk, expDef = 'Defesa: '+pDef;
-      var explicacao = venceu
-        ? 'Seu ataque ('+pAtk+') superou a defesa de '+nomeOponente+' ('+pDef+').'
-        : 'Sua defesa ('+pDef+') n\u00e3o foi suficiente contra o ataque de '+nomeOponente+' ('+pAtk+').';
-      mel.innerHTML=
-        '<div class="ath-duelo-res '+(venceu?'ath-res-vit':'ath-res-der')+'">'+
-          '<div class="ath-duelo-ico">'+(venceu?'\u2694\ufe0f':'\u2620\ufe0f')+'</div>'+
-          '<div class="ath-duelo-titulo">'+(venceu?'Vit\u00f3ria':'Derrota')+'</div>'+
-          '<div class="ath-duelo-exp">'+explicacao+'</div>'+
-          '<div class="ath-duelo-linha">Seu HP perdido: <strong>\u2212'+danoMeu+' HP</strong></div>'+
-          '<div class="ath-duelo-linha">'+nomeOponente+' perdeu: <strong>\u2212'+danoOponente+' HP</strong></div>'+
-          (!venceu?'<div class="ath-duelo-aviso">Voc\u00ea tem 24h para contra-atacar.</div>':'')+
+  // FIX 3: modal de resultado mostra a fórmula completa
+  function mostrarResultadoDuelo(atacVenceu, danoMeu, danoOponente, nomeOponente, combate, isContraAtaque) {
+    abrirModal('Resultado do Duelo', function(mel) {
+      var venceu = isContraAtaque ? !atacVenceu : atacVenceu;
+      var c = combate;
+      var bonusStr = c.bonusD > 0 ? ' × ' + Math.round((1 + c.bonusD) * 100) + '% (bônus CA)' : '';
+
+      // linha da fórmula de ataque
+      var linhaAtk =
+        'INT (' + (c.atrA.inteligencia||0) + ') + DET (' + (c.atrA.determinacao||0) + ') = ' + c.baseAtk +
+        ' + d20 (' + c.dado1 + ') = <strong>' + c.pA + '</strong>';
+
+      // linha da fórmula de defesa
+      var basDefLabel = isContraAtaque
+        ? '(RES + DET + INT) × 1,5' + bonusStr
+        : '(RES + DET + INT) × 1,5';
+      var linhaDefAtrs = isContraAtaque
+        ? '(' + (c.atrD.resistencia||0) + ' + ' + (c.atrD.determinacao||0) + ' + ' + (c.atrD.inteligencia||0) + ') × 1,5' + bonusStr + ' = ' + Math.round(c.baseDef * (1 + c.bonusD))
+        : '(' + (c.atrD.resistencia||0) + ' + ' + (c.atrD.determinacao||0) + ' + ' + (c.atrD.inteligencia||0) + ') × 1,5 = ' + c.baseDef;
+      var linhaDef = linhaDefAtrs + ' + d20 (' + c.dado2 + ') = <strong>' + c.pD + '</strong>';
+
+      var conclusao = venceu
+        ? 'Seu ataque (' + c.pA + ') superou a defesa de ' + nomeOponente + ' (' + c.pD + ').'
+        : 'A defesa de ' + nomeOponente + ' (' + c.pD + ') resistiu ao seu ataque (' + c.pA + ').';
+
+      mel.innerHTML =
+        '<div class="ath-duelo-res ' + (venceu ? 'ath-res-vit' : 'ath-res-der') + '">' +
+          '<div class="ath-duelo-ico">' + (venceu ? '\u2694\ufe0f' : '\u2620\ufe0f') + '</div>' +
+          '<div class="ath-duelo-titulo">' + (venceu ? 'Vitória' : 'Derrota') + '</div>' +
+
+          '<div class="ath-duelo-formula">' +
+            '<div class="ath-formula-bloco">' +
+              '<span class="ath-formula-label">⚔ Ataque (INT + DET + d20)</span>' +
+              '<span class="ath-formula-calc">' + linhaAtk + '</span>' +
+            '</div>' +
+            '<div class="ath-formula-bloco">' +
+              '<span class="ath-formula-label">🛡 Defesa ((RES + DET + INT) × 1,5' + (c.bonusD > 0 ? ' + bônus CA' : '') + ' + d20)</span>' +
+              '<span class="ath-formula-calc">' + linhaDef + '</span>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="ath-duelo-exp">' + conclusao + '</div>' +
+          '<div class="ath-duelo-linha">Seu HP perdido: <strong>\u2212' + danoMeu + ' HP</strong></div>' +
+          '<div class="ath-duelo-linha">' + nomeOponente + ' perdeu: <strong>\u2212' + danoOponente + ' HP</strong></div>' +
+          (!venceu && !isContraAtaque ? '<div class="ath-duelo-aviso">Você tem 24h para contra-atacar.</div>' : '') +
         '</div>';
     });
   }
@@ -443,17 +504,14 @@
       });
     });
 
-    // Entrar
     var btnEntrar=document.getElementById('ath-btn-entrar');
     if (btnEntrar) btnEntrar.addEventListener('click',function(){ abrirModalEntrada(user,_camadaVis,atributos); });
 
-    // Sair
     var btnSair=document.getElementById('ath-btn-sair');
     if (btnSair) btnSair.addEventListener('click',function(){
       if (window.confirm('Encerrar agora? Os Gale\u00f5es ser\u00e3o registrados.')) encerrarSessao(user,sessao);
     });
 
-    // Ações
     var bn=document.getElementById('ath-btn-notif');
     if (bn) bn.addEventListener('click',function(){ abrirModal('Notifica\u00e7\u00f5es',function(mel){ renderNotificacoes(user,mel); }); });
     var bh=document.getElementById('ath-btn-hist');
@@ -546,12 +604,14 @@
   function encerrarSessao(user, sessao) {
     if (_timer){ clearInterval(_timer); _timer=null; }
     pararStatusTick();
-    getNome(user.uid).then(function(nome){
-      processarSaida(user.uid,nome,sessao).then(function(calc){
-        dbDel('/athenaeum/ativas/'+fkey(user.uid)).then(function(){
-          toast('+'+calc.galeoes+' Gale\u00f5es registrados!',4000);
-          renderTopBar(user,null,_atrCache||{});
-          carregarPagina(user);
+    dbPatch('/athenaeum/ativas/'+fkey(user.uid), { encerrando: true }).then(function(){
+      getNome(user.uid).then(function(nome){
+        processarSaida(user.uid, nome, sessao).then(function(calc){
+          dbDel('/athenaeum/ativas/'+fkey(user.uid)).then(function(){
+            toast('+'+calc.galeoes+' Galeões registrados!', 4000);
+            renderTopBar(user, null, _atrCache||{});
+            carregarPagina(user);
+          });
         });
       });
     });
@@ -602,7 +662,7 @@
           btn.disabled=true; btn.classList.add('ath-btn-usado');
           executarDuelo(user,btn.dataset.alvo,btn.dataset.nome,_camadaVis).then(function(res){
             if (!res){ btn.disabled=false; btn.classList.remove('ath-btn-usado'); return; }
-            mostrarResultadoDuelo(res.atacVenceu,res.danoAtacante,res.danoDefensor,btn.dataset.nome,res.pA,res.pD);
+            mostrarResultadoDuelo(res.atacVenceu, res.danoAtacante, res.danoDefensor, res.nomeOponente, res.combate, false);
           });
         });
       });
@@ -630,7 +690,7 @@
               : (n.atacante_nome||'Algu\u00e9m')+' te desafiou e perdeu.';
             if (n.poder_atk&&n.poder_def){
               expInfo=n.atacante_venceu
-                ? 'O ataque de '+(n.atacante_nome||'Algu\u00e9m')+' ('+n.poder_atk+') superou sua defesa ('+n.poder_def+').'
+                ? 'Ataque de '+(n.atacante_nome||'Algu\u00e9m')+': '+n.poder_atk+' vs. sua defesa: '+n.poder_def+'.'
                 : 'Sua defesa ('+n.poder_def+') resistiu ao ataque de '+(n.atacante_nome||'Algu\u00e9m')+' ('+n.poder_atk+').';
             }
           } else {
@@ -639,7 +699,7 @@
               : (n.defensor_nome||'Algu\u00e9m')+' contra-atacou e venceu.';
             if (n.poder_atk&&n.poder_def){
               expInfo=n.atacante_venceu
-                ? 'Seu ataque ('+n.poder_atk+') superou a defesa de '+(n.defensor_nome||'Algu\u00e9m')+' ('+n.poder_def+'), mesmo com b\u00f4nus.'
+                ? 'Seu ataque ('+n.poder_atk+') superou a defesa de '+(n.defensor_nome||'Algu\u00e9m')+' ('+n.poder_def+') com b\u00f4nus.'
                 : 'A defesa de '+(n.defensor_nome||'Algu\u00e9m')+' ('+n.poder_def+') superou seu ataque ('+n.poder_atk+') com b\u00f4nus.';
             }
           }
@@ -674,7 +734,7 @@
           btn.disabled=true;
           executarContraAtaque(user,btn.dataset.id,btn.dataset.nid).then(function(res){
             if (res.erro){ toast(res.erro,4000); btn.disabled=false; return; }
-            mostrarResultadoDuelo(!res.atacVenceu,res.danoDefensor,res.danoAtacante,'oponente',res.pA,res.pD);
+            mostrarResultadoDuelo(res.atacVenceu, res.danoDefensor, res.danoAtacante, res.nomeOponente, res.combate, true);
             renderNotificacoes(user,el);
           });
         });
@@ -763,40 +823,37 @@
     });
     if (user.logado) atualizarBadge(user.uid);
   }
-function iniciarListenerAtivas(user) {
-  var es = new EventSource(DB + '/athenaeum/ativas.json');
 
-  es.addEventListener('put', function(e) {
-    var ativas = JSON.parse(e.data).data;
-    limparExpiradas(ativas);
-    renderCards(ativas, user);
-    if (user.logado) atualizarBadge(user.uid);
-  });
-
-  es.addEventListener('patch', function(e) {
-    dbGet('/athenaeum/ativas').then(function(ativas) {
+  function iniciarListenerAtivas(user) {
+    var es = new EventSource(DB + '/athenaeum/ativas.json');
+    es.addEventListener('put', function(e) {
+      var ativas = JSON.parse(e.data).data;
       limparExpiradas(ativas);
       renderCards(ativas, user);
+      if (user.logado) atualizarBadge(user.uid);
     });
-  });
+    es.addEventListener('patch', function(e) {
+      dbGet('/athenaeum/ativas').then(function(ativas) {
+        limparExpiradas(ativas);
+        renderCards(ativas, user);
+      });
+    });
+    return es;
+  }
 
-  return es;
-}
   function buildUI() {
     var user=getUser();
     _el.innerHTML=
-  
       '<div id="ath-entrada">'+
         '<div id="ath-entrada-bg"></div>'+
         '<div id="ath-entrada-conteudo">'+
           '<div class="ath-entrada-subtitulo">Acervo Restrito</div>'+
           '<div class="ath-entrada-titulo">Athenaeum</div>'+
           '<div class="ath-entrada-linha"></div>'+
-          '<p class="ath-entrada-desc">Conhecimento tem um preço.<br>Apenas bruxos adultos podem avançar.</p>'+
+          '<p class="ath-entrada-desc">Conhecimento tem um pre\u00e7o.<br>Apenas bruxos adultos podem avan\u00e7ar.</p>'+
           '<button id="ath-btn-aparatar" class="ath-btn-aparatar">Aparatar</button>'+
         '</div>'+
       '</div>'+
-    
       '<div id="ath-wrapper" style="display:none">'+
         '<div id="ath-topbar"></div>'+
         '<div id="ath-main">'+
@@ -836,9 +893,10 @@ function iniciarListenerAtivas(user) {
     } else {
       renderTopBar(user,null,{});
     }
-carregarPagina(user);
-_polling = iniciarListenerAtivas(user);
-} 
+    carregarPagina(user);
+    _polling = iniciarListenerAtivas(user);
+  }
+
   buildUI();
 
 })();
