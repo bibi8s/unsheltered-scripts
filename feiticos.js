@@ -81,7 +81,7 @@
     ANOS.forEach(function(ano, i) {
       var num      = String(i + 1);
       var liberado = anos && anos[num] === true;
-      var label    = (i + 1) + 'º';
+      var label    = (i + 1) + 'º Ano';
       if (liberado) {
         if (podeGer) {
           html +=
