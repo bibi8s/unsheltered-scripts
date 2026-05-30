@@ -13,7 +13,7 @@
   ];
 
   var NIVEIS_PCT = [0,5,10,15,20,25,35,40,50,60,70,80,85,90,95,100];
-  var POSTS_NECESSARIOS = {0:1,5:1,10:1,15:2,20:2,25:3,35:3,40:3,50:4,60:4,70:5,80:5,85:5,90:6,95:8,100:0};
+  var POSTS_NECESSARIOS = {5:1,10:2,15:2,20:2,25:3,35:3,40:4,50:4,60:5,70:5,80:5,85:6,90:8,95:8,100:0};
 
   var GRAUS_ESP  = ['Zero','Aprendiz','Iniciante','Entendido','Mestre','Especialista'];
   var BONUS_ESP  = {Zero:0,Aprendiz:2,Iniciante:6,Entendido:10,Mestre:12,Especialista:15};
@@ -193,7 +193,7 @@
         btn.addEventListener('click',function(){
           var s = btn.dataset.slug;
           mpPut('/maestrias-personagem/'+fkeyM(uid)+'/'+s,{
-            porcentagem:0, posts_cur:0, posts_max:POSTS_NECESSARIOS[0]||1, especializacoes:{}
+            porcentagem:5, posts_cur:0, posts_max:1, especializacoes:{}
           }).then(function(){
             mpToast((catalogo[s]&&catalogo[s].nome?catalogo[s].nome:s)+' adicionada!');
             carregarMaestrias();
