@@ -1,0 +1,904 @@
+#bibliobx1 {
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  height: 615px;
+  border-bottom: var(--bordaroxa);
+  background-color: #272727bd;
+  background-blend-mode: overlay;
+  font-size: 14px;
+  color: #ddd;
+  background-image: url(https://i.imgur.com/Y30aMOY.jpeg);
+  background-size: cover;
+    background-position: center;
+}
+
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #0000007a;
+  border-bottom: 1px solid #262626;
+}
+
+#uinfo {   width: 59%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#unome {font: 100 25px mosca;color: var(--groupbody);}
+
+ 
+#crono {
+  width: 175px;
+  font-size: 30px;
+  letter-spacing: 2px;
+  color: var(--groupbody);
+  font-family: 'Mosca';
+  text-shadow: 0 0 20px;
+}
+
+#andares {
+  width: 100%;
+  height: calc(100% - 57px);
+  position: relative;
+}
+
+#and1, #and2, #and3 {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#and2, #and3 { display: none; }
+
+#overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1;
+}
+
+#btnbib {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  padding: 12px 28px;
+  background: var(--accent1);
+  color: #f5f2ee;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'against';
+}
+
+#admpain { display: none; }
+
+#bibmod {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+#bibmodbox {
+  background: #000000cc;
+  padding: 32px;
+  border: 1px solid #8b44c554;
+  width: 60%;
+  margin-top: 10px;
+  height: 420px;
+  overflow: auto;
+  position: relative;
+}
+
+#modent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+#modmesas, #modlivro, #modhoras {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#modmesas p, #modlivro p, #modhoras p {
+  width: 100%;
+  color: var(--accent2);
+  margin: 0;
+  letter-spacing: 1px;
+  font-family: 'against';
+  font-size: 20px;
+}
+
+.btnmesa, .btnhora {
+  padding: 15px 10px;
+  background: none;
+  border: 1px solid #474747;
+  font: 700 10px poppins;
+  letter-spacing: 1px;
+  background: var(--fnd-tab);
+  text-transform: uppercase;
+  color: #f1f1f1;
+  flex: 1;
+  cursor: pointer;
+}
+
+.btnmesa:hover, .btnhora:hover { border: 1px solid #cfb674; }
+.btnmesa.sel, .btnhora.sel { border-color: #2c2c2c; background: var(--accent1); }
+.btnmesa.cheio {color: #565656;border-color: #565656;cursor: not-allowed;background: #3434349c;}
+
+.btnmesa small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: #ccb95c;
+  text-transform: uppercase!important;
+  margin-top: 4px;
+}
+
+#modhoras { flex-direction: row; flex-wrap: wrap; }
+.btnhora {text-align: center;font-size: 13px;font-weight: 600;}
+
+#selvlivro {
+  padding: 8px;
+  border: 1px solid var(--accent1);
+  background: #000000;
+  font-family: calibri;
+  font-size: 13px;
+  color: #bebebe;
+  width: 100%;
+}
+
+#btnentrar {
+  padding: 12px 28px;
+  background: var(--accent1);
+  color: #f5f2ee;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'against';
+  width: 100%;
+}
+
+#modinfo {
+  font-size: 11px;
+  color: #aaa;
+  text-transform: uppercase;
+  font-family: 'Work Sans';
+  padding: 8px 0;
+  border-top: 1px solid #333;
+}
+
+#bibmsg {color: #bbbbbb;text-align: center;margin: 0;}
+
+#bibcards {
+  display: flex;
+  flex-wrap: wrap;
+  overflow: auto;
+  gap: 10px;
+  padding: 20px;
+  height: 490px;
+  align-content: flex-start;
+}
+
+.card {
+  padding: 15px;
+  background: #00000099;
+  border: 1px solid #333;
+  border-left: 3px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 46%;
+  height: 125px;
+}
+
+.card.cinza   { border-left-color: #9e9e9e; }
+.card.laranja { border-left-color: #e07b39; }
+.card.azul    { border-left-color: #4a7fa5; }
+.card.amarelo { border-left-color: #c9a84c; }
+.card.verde   { border-left-color: #5a8f6a; }
+
+.cnome {font-family: 'against';font-size: 15px;color: var(--accent4);}
+
+.cmesa {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: 'IBM Plex Mono';
+}
+
+.clivro {font-size: 11px;color: #aaa;text-transform: uppercase;}
+
+.cstatus {
+  font-size: 11px;
+  color: #bbb;
+  height: 10px;
+  margin-top: 4px;
+  outline: none;
+  border-bottom: 1px solid transparent;
+}
+
+.cstatus[contenteditable]:focus { border-bottom: 1px solid #555; }
+
+#bibvazia { color: #666; font-size: 12px; font-family: 'IBM Plex Mono'; }
+
+#bibarea {
+  display: flex;
+  width: 100%;
+  height: calc(100% - 57px);
+}
+
+#bibside {
+  width: 26%;
+  height: 550px;
+  background: #00000099;
+  border-right: 1px solid #262626;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+#andares {
+  width: 73%;
+  height: 100%;
+  position: relative;
+}
+
+#sideatribs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebloco {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-left: 3px solid var(--groupbody-75);
+  padding-left: 10px;
+}
+
+.sidelabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #c8c8c8;
+  font-family: 'Poppins';
+}
+
+.sideval {
+  font-size: 18px;
+  font-family: 'against';
+  color: #ddd;
+}
+
+.sidebonus {
+  font-size: 10px;
+  color: #c9a84c;
+  font-family: 'IBM Plex Mono';
+}
+
+#sidelivro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 16px;
+  border-top: 1px solid #262626;
+}
+
+.sidelivronome {
+  font-size: 12px;
+  color: gold;
+}
+
+#sideandares {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.btnand {
+  padding: 10px;
+  background: none;
+  border: 1px solid #474747;
+  color: #c3c3c3;
+  flex: 1;
+  font-family: 'against';
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btnand:hover { border-color: #cfb674; }
+
+#topbtns {
+  display: flex;
+  gap: 8px;
+}
+
+.btnbar {
+  background: #000;
+  border: 1px solid #474747;
+  color: var(--groupbody);
+  font-family: 'IBM Plex Mono';
+  font-size: 15px;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  width: 35px;
+  height: 35px;
+}
+
+.btnbar:hover { border-color: #cfb674; }
+
+#modrank, #modhist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modtitle {
+  font-family: 'Poppins';
+  font-size: 20px;
+  width: 93%;
+  color: var(--accent2);
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.rankitem, .histitem {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: #f1f1f1;
+  font-family: 'IBM Plex Mono';
+  border: 1px solid #222;
+  padding: 5px;
+}
+
+.rankpos { color: #666; width: 20px; }
+.ranknome { flex: 1; }
+.rankhoras { color: #c9a84c; }
+
+.histdata {color: #a9a9a9;width: 80px;}
+.histhoras { color: #c9a84c; width: 40px; }
+.histdet {color: #ababab;font-size: 10px;}
+#btnvoltar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 6px 14px;
+  background: none;
+  border: 1px solid #474747;
+  color: #c3c3c3;
+  font-family: 'IBM Plex Mono';
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  z-index: 2;
+}
+
+#btnvoltar:hover { border-color: #cfb674; }
+
+#modmarc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.marcototal {
+  font-family: 'IBM Plex Mono';
+  font-size: 11px;
+  color: #e3e3e3;
+  text-transform: uppercase;
+}
+
+.marcoitem {
+  display: flex;
+  gap: 6px;
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+.marcohoras {
+  font-family: 'against';
+  font-size: 16px;
+  color: #ddd;
+}
+
+.marcorecomp {
+  flex: 1;
+  font-size: 11px;
+  color: #bbb;
+  font-family: 'IBM Plex Mono';
+}
+
+.marcook {
+  font-size: 10px;
+  color: #5a8f6a;
+  font-family: 'IBM Plex Mono';
+  flex-shrink: 0;
+}
+
+.marcolock {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  align-items: center;
+}
+
+.marcolock i {
+  font-size: 12px;
+  color: #555;
+}
+
+.marcobarra {
+  width: 100%;
+  height: 3px;
+  background: #333;
+}
+
+.marcobarra span {
+  display: block;
+  height: 100%;
+  background: #c9a84c;
+}
+
+.btnresgatar {
+  padding: 5px 12px;
+  border: 1px solid #343434;
+  color: #e8e8e8;
+  background: #263a26;
+  font-family: 'IBM Plex Mono';
+  font-size: 10px;
+  text-transform: uppercase;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btnresgatar:hover { background: #9f4f4f; }
+
+#sideprog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #262626;
+}
+#bilhtexto {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 8px;
+  background: #000;
+  border: 1px solid #474747;
+  color: #ccc;
+  font-family: calibri;
+  font-size: 13px;
+  resize: vertical;
+}
+
+#bilhenergialabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #aaa;
+  font-family: 'IBM Plex Mono';
+  cursor: pointer;
+}
+
+#bilhenergiaaviso {
+  font-size: 11px;
+  color: #666;
+  font-family: 'IBM Plex Mono';
+  margin-top: 8px;
+}
+
+#btnenviar {
+  margin-top: 12px;
+  width: 100%;
+}
+#modbilh {
+  display: flex;
+  gap: 10px;
+  height: 400px;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.bilhitem {
+  display: flex;
+  border: 1px solid #323232;
+  flex-direction: column;
+  gap: 6px;
+  width: 47%;
+  min-height: 100px;
+  padding: 10px;
+  background: #0a0a0ad9;
+  position: relative;
+  justify-content: space-around;
+}
+
+.bilhnovo {border-left: 2px solid #c95d4c;padding-left: 8px;}
+
+.bilhheader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bilhremetente {
+  font-family: 'against';
+  font-size: 14px;
+  color: #ddd;
+}
+
+.bilhdata {
+  font-size: 10px;
+  color: #d0d0d0;
+  font-family: 'IBM Plex Mono';
+}
+
+.bilhtexto {
+  font-size: 13px;
+  color: #bbb;
+  font-family: calibri;
+}
+
+.bilhdel {
+  position: absolute;
+  background: #2c2c2c;
+  top: 3px;
+  right: 2px;
+  border: 1px solid #262626;
+  color: #d0d0d0;
+  cursor: pointer;
+  width: 25px;
+  height: 25px;
+  font-size: 11px;
+  border-radius: 100px;
+}
+
+.bilhdel:hover { background: #c06060; }
+
+#modenvbilh {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cdesc {
+  font-size: 10px;
+  color: #666;
+  font-family: 'IBM Plex Mono';
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}.cardacoes {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.btnint {
+  padding: 5px 8px;
+  flex: 1;
+  background: none;
+  border: 1px solid #474747;
+  color: #c3c3c3;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.btnint:hover { border-color: #cfb674; }
+.btnint.usado { color: #444; border-color: #333; cursor: not-allowed; }
+
+#modint {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.intitem {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+  font-family: 'IBM Plex Mono';
+  font-size: 11px;
+}
+
+.intremetente { color: #ddd; flex: 1; }
+.intlabel     { color: #c9a84c; }
+.intdata      {color: #a9a9a9;font-size: 10px;}
+.livroitem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+}
+
+.livronome {
+  font-family: 'against';
+  font-size: 14px;
+  color: #ddd;
+}
+
+.livrodies {
+  font-size: 10px;
+  color: #c9a84c;
+  font-family: 'IBM Plex Mono';
+}
+
+#modlivros {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #c06060;
+  color: #fff;
+  border-radius: 100px;
+  width: 16px;
+  height: 16px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono';
+  pointer-events: none;
+}
+
+.btnbar {
+  position: relative;
+}
+#moddupla, #modconvidar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#duplabox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid #c9a;
+  background: #1a0f1a;
+}
+
+.duplanome {
+  font-family: 'against';
+  font-size: 16px;
+  color: #ddd;
+}
+
+.duplaand {
+  font-size: 11px;
+  color: #888;
+  font-family: 'IBM Plex Mono';
+}
+
+.duplabonus {
+  font-size: 10px;
+  color: #c9a84c;
+  font-family: 'IBM Plex Mono';
+  margin-top: 4px;
+}
+
+#convitelista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conviteitem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+.convitenome {
+  font-family: 'against';
+  font-size: 14px;
+  color: #ddd;
+}
+
+.conviteexp {
+  font-size: 10px;
+  color: #555;
+  font-family: 'IBM Plex Mono';
+}
+
+.card.dupla { border-color: #c9a; border-left-color: #c9a; }
+
+#admtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.admtab {
+  flex: 1;
+  padding: 5px 12px;
+  background: none;
+  border: 1px solid #474747;
+  color: #d0d0d0;
+  font-family: 'Poppins';
+  font-size: 10px;
+  text-transform: uppercase;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.admtab:hover { border-color: #cfb674; color: #ccc; }
+.admtab.ativo { border-color: var(--accent1); color: #ddd; background: var(--accent1); }
+
+#admconteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+#admlivrolista { display: flex; flex-direction: column; gap: 6px; }
+
+.admitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #222;
+}
+
+.admnome { flex: 1; font-size: 12px; color: #ddd; font-family: 'IBM Plex Mono'; }
+.admsub  {display: none;}
+
+.admaddrow { display: flex; gap: 8px; }
+
+.adminput {
+  background: #000;
+  border: 1px solid #474747;
+  color: #ccc;
+  font-family: 'IBM Plex Mono';
+  font-size: 12px;
+  padding: 6px 8px;
+  flex: 1;
+}
+
+.histbonus { color: #c9a84c; }
+
+#listaduplas { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+
+.duplaitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+}
+
+#inttabs {
+    gap: 10px;
+    display: flex;
+}
+
+
+
+
+#ritgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 50px;
+  overflow: auto;
+}
+
+.ritcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 120px;
+  padding: 12px;
+  border: 1px solid #2c2c2c;
+  background: linear-gradient(
+0deg, black, transparent);
+}
+
+.riticone img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.ritnome {
+  font-family: 'IBM Plex Mono';
+  font-size: 10px;
+  color: #ccc;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ritprog {
+  font-family: 'IBM Plex Mono';
+  font-size: 10px;
+  color: #cbcbcb;
+}
+
+.ritfeito {
+  font-family: 'IBM Plex Mono';
+  font-size: 10px;
+  color: #c9a84c;
+}
+#btnconfirmresg {
+    width: 100%;
+}
+#modbloqueado {
+    border: var(--bordaroxa1);
+    background: #000000cc;
+    padding: 45px;
+}
+
+#and3grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+}
+
+.and3icone {
+  transition: transform 0.2s;
+}
+
+.and3icone:hover:not([disabled]) {
+  transform: scale(1.1);
+}
+
+.and3usado {
+  opacity: 0.4;
+}
+
