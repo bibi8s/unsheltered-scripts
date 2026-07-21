@@ -1569,13 +1569,18 @@ function resolverAcaoUnicaFatia1a(pid, match, faseNum, time, pos){
       return finalizar();
     }
 
-    case 'lancar_goles':
+case 'lancar_goles':
     case 'auxiliar':
     case 'inspirar': {
       if(!ac.alvo){ return finalizar(); }
       savesExtra.push(darBonusSituacionalSeq(pid, faseNum, time, ac.alvo, 2));
       var verboAcao = { lancar_goles:'lançou a Goles para', auxiliar:'auxiliou', inspirar:'inspirou' }[ac.acao];
       log(slotAtor.nome + ' ' + verboAcao + ' ' + sl(time, ac.alvo).nome + '. +2 na próxima ação dele.', { afeta: [time + '_' + ac.alvo] });
+      if(pos === 'goleiro'){
+        return finalizar().then(function(resultado){
+          return resolverPendentesContraGoleiro(pid, match, faseNum, time).then(function(){ return resultado; });
+        });
+      }
       return finalizar();
     }
 
@@ -1712,12 +1717,12 @@ function resolverAcaoUnicaFatia1b(pid, match, faseNum, time, pos){
       if(protegidoMer){
         log('Combo: Cobertura Perfeita. ' + slotAtor.nome + ' mergulha protegido pelo Batedor, bônus extra.');
       }
-      if(vencedor(rAtkMer, rDefMer)){
-        savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/mergulhoBonus/' + time + '_' + pos, 4));
-        log(slotAtor.nome + ' fez um Mergulho impressionante. +4 no arremesso.', { dados: dadosMer });
+if(vencedor(rAtkMer, rDefMer)){
+        savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time + '/slots/' + pos, { mergulhoBonus: 4 }));
+        log(slotAtor.nome + ' fez um Mergulho impressionante. +4 no próximo arremesso dele.', { dados: dadosMer });
       }else{
-        savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/expostos/' + time + '_' + pos, true));
-        log(slotAtor.nome + ' tentou mergulhar mas foi bloqueado. Ficou exposto.', { dados: dadosMer });
+        savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time + '/slots/' + pos, { exposto: true }));
+        log(slotAtor.nome + ' tentou mergulhar mas foi bloqueado. Vai ficar exposto no próximo arremesso.', { dados: dadosMer });
       }
       return finalizar();
     }
@@ -1846,9 +1851,11 @@ function resolverArremessoUnico(pid, match, faseNum, time, pos){
     return finalizar();
   }
 
-  var passeBonus = ((faseObj.bonusSituacional || {})[time + '_' + pos]) || 0;
-  var mergulhoBonus = ((faseObj.mergulhoBonus || {})[time + '_' + pos]) || 0;
-  var expostoAtk = !!(faseObj.expostos || {})[time + '_' + pos];
+var passeBonus = ((faseObj.bonusSituacional || {})[time + '_' + pos]) || 0;
+  var mergulhoBonus = ast.mergulhoBonus || 0;
+  var expostoAtk = !!ast.exposto;
+  if(mergulhoBonus) savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time + '/slots/' + pos, { mergulhoBonus: null }));
+  if(expostoAtk) savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time + '/slots/' + pos, { exposto: null }));
   var protegidoAtk = !!(faseObj.protegidos || {})[time + '_' + pos];
   if(protegidoAtk){
     savesExtra.push(somarMvpSeq(pid, time + '_batedor', QUAD_MVP_COMBO));
@@ -2348,10 +2355,15 @@ function renderLogAbas(idTabs, idConteudo, fasesObj, mapaCores){
   var numeros = Object.keys(fasesObj || {}).map(Number).filter(function(n){ return fasesObj[n]; }).sort(function(a, b){ return a - b; });
   if(!numeros.length) return;
 
-  if(!logAbasEstado[idTabs]) logAbasEstado[idTabs] = { abaAtual: numeros[numeros.length - 1], contagens: {} };
+if(!logAbasEstado[idTabs]) logAbasEstado[idTabs] = { abaAtual: numeros[numeros.length - 1], contagens: {}, maiorFaseConhecida: numeros[numeros.length - 1] };
   var estado = logAbasEstado[idTabs];
   if(numeros.indexOf(estado.abaAtual) === -1) estado.abaAtual = numeros[numeros.length - 1];
 
+  var maiorFaseAgora = numeros[numeros.length - 1];
+  if(maiorFaseAgora > estado.maiorFaseConhecida){
+    estado.maiorFaseConhecida = maiorFaseAgora;
+    estado.abaAtual = maiorFaseAgora;
+  }
   var elTabs = document.getElementById(idTabs);
   var elConteudo = document.getElementById(idConteudo);
   if(!elTabs || !elConteudo) return;
