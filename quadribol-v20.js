@@ -1578,7 +1578,7 @@ function resolverAcaoUnicaFatia1a(pid, match, faseNum, time, pos){
       if(!ac.alvo){ return finalizar(); }
       var jaInterceptado = ((match.fases[faseNum] || {}).interceptados || {})[time];
       if(jaInterceptado){
-        log(slotAtor.nome + ' tentou passar a Goles, mas o Batedor adversário já tinha interceptado o time.');
+        log(slotAtor.nome + ' tentou passar a Goles, mas o Batedor adversário intercepta.');
         return finalizar();
       }
       savesExtra.push(darBonusSituacionalSeq(pid, faseNum, time, ac.alvo, 2));
@@ -2040,7 +2040,7 @@ var rAtkLB = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match,
     }
 	
 case 'defender': {
-      log(slotAtor.nome + ' se posiciona nos aros, pronto pra defender.');
+      log(slotAtor.nome + ' se posiciona nos aros, pronto para defender.');
       return finalizar().then(function(resultado){
         return resolverPendentesContraGoleiro(pid, match, faseNum, time).then(function(){ return resultado; });
       });
@@ -2053,7 +2053,7 @@ case 'defender': {
 
       if(!goleiroJaResolveu){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/pendentes/' + time + '_' + pos, { tipo:'arremessar', golvTime: golvT }));
-log(slotAtor.nome + ' arremessou — aguardando reação do Goleiro adversário.', { afeta: [time + '_' + pos] });
+log(slotAtor.nome + ' arremessou a goles.', { afeta: [time + '_' + pos] });
         var saves = savesExtra.slice();
         entradasLog.forEach(function(entrada, i){
           saves.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/resultado/log/' + (logIndex + i), entrada));
@@ -2116,11 +2116,11 @@ function resolverArremessoContraGoleiroCaido(pid, match, faseNum, time, pos, gol
 
   if(!conseguiu){
     var pts2 = pontosGolSeq(match, faseNum, time);
-    log(gs.nome + ' não conseguiu se levantar a tempo. GOOOOL de novo! +' + pts2 + ' para ' + match.times[time].nome + '.');
+    log(gs.nome + ' não conseguiu se levantar a tempo. GOOOOL! +' + pts2 + ' para ' + match.times[time].nome + '.');
     return fecharComGol(pts2, 2);
   }
 
-log(gs.nome + ' conseguiu se levantar! Vai defender esse arremesso normalmente.');
+log(gs.nome + ' conseguiu se levantar! Vai defender tentar o defender o novo arremesso.');
   var saves2 = [fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/golsGoleiroCaido/' + golvT, 2)];
   entradas.forEach(function(entrada, i){
     saves2.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/resultado/log/' + (logIndex + i), entrada));
