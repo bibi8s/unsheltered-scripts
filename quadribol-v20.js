@@ -2966,10 +2966,12 @@ function renderFim(match){
     sep.textContent = 'fase ' + numFase;
     elLog.appendChild(sep);
 
+var mapaCoresFim = mapaCoresNomesJogadores(match);
     faseObj.resultado.log.forEach(function(entrada){
       var div = document.createElement('div');
       div.className = 'q3logl' + (entrada.combo ? ' q3logcombo' : '') + (entrada.pomo ? ' q3logpomo' : '');
-      div.textContent = typeof entrada === 'string' ? entrada : entrada.text;
+      var texto = typeof entrada === 'string' ? entrada : (entrada.text || '');
+      div.innerHTML = colorirNomesNoLog(escaparHtml(texto), mapaCoresFim) + spoilerDadosHtml(typeof entrada === 'object' ? entrada.dados : null);
       elLog.appendChild(div);
     });
   });
@@ -3040,6 +3042,7 @@ function renderHistorico(containerId){
           if(!match || !match.fases){
             box.innerHTML = '<div class="qlbl">log não disponível.</div>';
           }else{
+var mapaCoresHist = mapaCoresNomesJogadores(match);
             var fasesOrdenadas = Object.keys(match.fases).map(Number).sort(function(a, b){ return a - b; });
             fasesOrdenadas.forEach(function(numFase){
               var faseObj = match.fases[numFase];
@@ -3053,7 +3056,8 @@ function renderHistorico(containerId){
               faseObj.resultado.log.forEach(function(entrada){
                 var d = document.createElement('div');
                 d.className = 'q3logl' + (entrada.combo ? ' q3logcombo' : '') + (entrada.pomo ? ' q3logpomo' : '');
-                d.textContent = typeof entrada === 'string' ? entrada : entrada.text;
+                var texto = typeof entrada === 'string' ? entrada : (entrada.text || '');
+                d.innerHTML = colorirNomesNoLog(escaparHtml(texto), mapaCoresHist) + spoilerDadosHtml(typeof entrada === 'object' ? entrada.dados : null);
                 box.appendChild(d);
               });
             });
