@@ -2053,7 +2053,7 @@ case 'defender': {
 
       if(!goleiroJaResolveu){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/pendentes/' + time + '_' + pos, { tipo:'arremessar', golvTime: golvT }));
-log(slotAtor.nome + ' arremessou a goles.', { afeta: [time + '_' + pos] });
+log(slotAtor.nome + ' está arremessando a goles.', { afeta: [time + '_' + pos] });
         var saves = savesExtra.slice();
         entradasLog.forEach(function(entrada, i){
           saves.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/resultado/log/' + (logIndex + i), entrada));
