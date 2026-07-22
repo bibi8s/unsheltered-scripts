@@ -1112,7 +1112,9 @@ html += '<button type="button" class="q3acaobtn" data-sk="' + sk + '" data-acao=
       });
       html += '</div>';
       html += '<div class="q3alvo" id="q3alvo_' + sk + '" hidden></div>';
-      html += '<label class="q3boostcheck"><input type="checkbox" class="q3boost" data-sk="' + sk + '"' + (item.slot.boost_usado ? ' disabled' : '') + '> usar boost</label>';
+      if(!item.slot.boost_usado){
+        html += '<label class="q3boostcheck" title="Dobra o bônus desse roll. Só pode ser usado uma vez por partida."><i class="fa fa-bolt"></i> <input type="checkbox" class="q3boost" data-sk="' + sk + '"> usar Boost</label>';
+      }
       html += '<button type="button" class="q3confirmaracao" data-sk="' + sk + '" data-time="' + item.time + '" data-pos="' + item.pos + '">confirmar ação</button>';
       box.innerHTML = html;
     }
@@ -2232,17 +2234,21 @@ function resolverAcaoUnicaSequencial(pid, match, faseNum, time, pos){
   var pendentesFase = (match.fases[faseNum] && match.fases[faseNum].pendentes) || {};
   if(pendentesFase[time + '_' + pos]) return Promise.resolve('nao_aplicavel');
 
-  var derrubadosAtual = ((match.fases[faseNum] || {}).derrubados) || {};
+var derrubadosAtual = ((match.fases[faseNum] || {}).derrubados) || {};
   if(derrubadosAtual[time + '_' + pos]){
     var slotCaido = match.times[time].slots[pos] || {};
     var logIndexCaido = logSequencialProxIndex(match, faseNum);
     var savesCaido = [
       fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/resultado/log/' + logIndexCaido, {
-        text: slotCaido.nome + ' está zonzo(a).'
+        text: slotCaido.nome + ' está zonzo(a) e perdeu a vez nesta fase.'
       }),
       fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/acoes/' + time + '_' + pos, { resolvida: true })
     ];
-    return Promise.all(savesCaido).then(function(){ return 'resolvida'; });
+    return Promise.all(savesCaido).then(function(){
+      if(pos === 'goleiro'){
+        return resolverPendentesContraGoleiro(pid, match, faseNum, time);
+      }
+    }).then(function(){ return 'resolvida'; });
   }
 
   function cadeiaNormal(){
