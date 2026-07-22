@@ -52,11 +52,13 @@ var QUAD_ATRAPALHAR_PENALIDADE = 0.02;
 
 var QUAD_EVENTO_CHANCE = 0.10;
 
+var QUAD_EVENTO_DURACAO_FASES = 5;
+
 var QUAD_EVENTOS_FASE = [
-  { id:'chuva', nome:'Chuva Forte', afeta:['artilheiro'], penalidade:2 },
-  { id:'tempestade', nome:'Tempestade', afeta:['goleiro','batedor'], penalidade:2 },
-  { id:'ventania', nome:'Ventania', afeta:['apanhador'], penalidade:2 },
-  { id:'passaros', nome:'Invasão de Pássaros', afeta:['artilheiro','goleiro','batedor','apanhador'], penalidade:1 }
+  { id:'chuva', nome:'Chuva Forte', afeta:['artilheiro'], penalidade:2, inicio:'Começa a chover.', ativo:'Está chovendo' },
+  { id:'tempestade', nome:'Tempestade', afeta:['goleiro','batedor'], penalidade:2, inicio:'Uma tempestade se forma no céu.', ativo:'Tempestade em curso' },
+  { id:'ventania', nome:'Ventania', afeta:['apanhador'], penalidade:2, inicio:'Uma ventania forte começa a soprar.', ativo:'Ventania forte' },
+  { id:'passaros', nome:'Invasão de Pássaros', afeta:['artilheiro','goleiro','batedor','apanhador'], penalidade:1, inicio:'Um bando de pássaros invade o campo.', ativo:'Invasão de pássaros' }
 ];
 
 
@@ -871,6 +873,19 @@ function statusTurnoIcon(faseObj, time, pos, ehAtual){
   });
 
 
+var eventoAtivo = (match.evento_ativo && fase <= match.evento_ativo.ate_fase) ? match.evento_ativo : null;
+  var elEvento = document.getElementById('q3eventoativo');
+  if(elEvento){
+    if(eventoAtivo){
+      var ICONE_EVENTO = { chuva:'fa-tint', tempestade:'fa-bolt', ventania:'fa-flag', passaros:'fa-twitter' };
+      document.getElementById('q3eventoicone').className = 'fa ' + (ICONE_EVENTO[eventoAtivo.id] || 'fa-cloud');
+      document.getElementById('q3eventonome').textContent = eventoAtivo.ativo || eventoAtivo.nome;
+      elEvento.hidden = false;
+    }else{
+      elEvento.hidden = true;
+    }
+  }
+
   document.getElementById('q3placarnomea').innerHTML = nomeCasaComEmblema(timeA.nome);
   document.getElementById('q3placarnomeb').innerHTML = nomeCasaComEmblema(timeB.nome);
   document.getElementById('q3pontosa').textContent = timeA.placar || 0;
@@ -886,7 +901,7 @@ renderLogAbas('q3logabas', 'q3log', match.fases, mapaCoresNomesJogadores(match))
 
   var log = (objParaLog.resultado && objParaLog.resultado.log) || [];
 
-  var destaquesDaFase = log.filter(function(e){ return e.combo || e.evento || e.pomo; });
+  var destaquesDaFase = log.filter(function(e){ return e.combo || e.pomo; });
 
   var elCombo = document.getElementById('q3combo');
   if(destaquesDaFase.length && ultimoComboMostrado !== faseParaLog){
@@ -1659,7 +1674,8 @@ function montarOpcoesRollSeq(match, faseNum, time, pos, tipoVassoura, especialid
   var lideranca = { A: faseObj.lideranca_A || null, B: faseObj.lideranca_B || null };
   var bonusMotivar = (lideranca[time] && lideranca[time].tipo === 'motivar' && lideranca[time].alvo === pos) ? 3 : 0;
   var bonusInsp = bonusInspirado(acoesFase, time, pos);
-  return { match:match, time:time, pos:pos, tipoVassoura:tipoVassoura, especialidade:especialidade, acaoObj:acaoObj, situacional:(situacional||0) + bonusMotivar + bonusInsp, evento: faseObj.evento || null };
+  var eventoAtual = (match.evento_ativo && faseNum <= match.evento_ativo.ate_fase) ? match.evento_ativo : null;
+  return { match:match, time:time, pos:pos, tipoVassoura:tipoVassoura, especialidade:especialidade, acaoObj:acaoObj, situacional:(situacional||0) + bonusMotivar + bonusInsp, evento: eventoAtual };
 }
 
 function resolverAcaoUnicaFatia1b(pid, match, faseNum, time, pos){
@@ -2426,9 +2442,24 @@ function fecharFaseSequencial(pid, match, faseNum){
         if(isEncerrada){
           return finalizarPartidaSequencial(pid, matchAtual);
         }
+var eventoAtivoAtual = matchAtual.evento_ativo;
+        var eventoAindaAtivo = eventoAtivoAtual && nextFase <= eventoAtivoAtual.ate_fase;
+        var novaFaseObj = { acoes:{} };
+        var patchMatch = { fase_atual: nextFase };
+
+        if(!eventoAindaAtivo){
+          var eventoNovo = sortearEvento();
+          if(eventoNovo){
+            patchMatch.evento_ativo = { id: eventoNovo.id, nome: eventoNovo.nome, ativo: eventoNovo.ativo, desde_fase: nextFase, ate_fase: nextFase + QUAD_EVENTO_DURACAO_FASES };
+            novaFaseObj.resultado = { log: [{ text: eventoNovo.inicio, evento: true, nome: eventoNovo.nome }] };
+          }else if(eventoAtivoAtual){
+            patchMatch.evento_ativo = null;
+          }
+        }
+
         return Promise.all([
-          fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, { fase_atual: nextFase }),
-          fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + nextFase, { acoes:{} })
+          fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, patchMatch),
+          fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + nextFase, novaFaseObj)
         ]);
       });
     });
