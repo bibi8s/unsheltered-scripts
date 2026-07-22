@@ -964,15 +964,14 @@ var ACOES = {
     { id:'rastrear', nome:'Rastrear', desc:'Acumula +1 de bônus para captura do Pomo. (turno de caça)', icon:'fa-search' },
     { id:'sabotar', nome:'Sabotar', desc:'Zera o rastreamento do Apanhador adversário. (turno de caça)', icon:'fa-bug' },
     { id:'distracao', nome:'Distração', desc:'Adversário perde a fase sem acumular rastreamento. (turno de caça)', icon:'fa-comment' },
-    { id:'auxiliar', nome:'Auxiliar', desc:'Passa a Goles para um Artilheiro aliado (+2).', alvos:'art_aliados', icon:'fa-handshake-o' },
-    { id:'mergulho_pomo', nome:'Mergulho pelo Pomo', desc:'Captura antecipada. Perdendo: -2 rastreamento. (turno de caça)', icon:'fa-star' },
+{ id:'auxiliar', nome:'Auxiliar', desc:'Passa a Goles para um Artilheiro aliado (+2).', alvos:'art_aliados', icon:'fa-handshake-o' },
     { id:'carregar', nome:'Carregar', desc:'Derruba o Apanhador adversário e zera o rastreio dele. (turno de caça)', icon:'fa-user-times' },
     { id:'inspirar', nome:'Inspirar', desc:'Dá +2 de bônus pra um aliado que ainda não agiu nesta fase.', alvos:'aliados', icon:'fa-lightbulb-o' },
     { id:'provocar', nome:'Provocar', desc:'Aplica -2 num adversário por 1 fase, sem precisar rolar.', alvos:'adversarios', icon:'fa-exclamation' }
   ]
 };
 
-var QUAD_APANHADOR_ACOES_CACA = ['rastrear','sabotar','distracao','carregar','mergulho_pomo'];
+var QUAD_APANHADOR_ACOES_CACA = ['rastrear','sabotar','distracao','carregar'];
 var QUAD_APANHADOR_CACA_MAX = 3;
 var QUAD_APANHADOR_CACA_FASE_MIN = 5;
 
@@ -1435,10 +1434,20 @@ function rolar(slot, atributoPrincipal, atributoSecundario, opcoes){
 
   var boost = bonusBoost(opcoes.acaoObj, bonusBaseTotal);
 
-var total = dado + bonusBaseTotal + boost;
+  var total = dado + bonusBaseTotal + boost;
   if(dado === 1) total -= 10;
 
-  return { total: total, critico20: dado === 20, dado: dado, bonus: bonusBaseTotal + boost };
+  var detalhePartes = [];
+  detalhePartes.push((ATTR_LABEL[atributoPrincipal] || atributoPrincipal) + ' ' + modPrincipal);
+  if(atributoSecundario) detalhePartes.push((ATTR_LABEL[atributoSecundario] || atributoSecundario) + ' ' + modSecundario);
+  if(vassoura) detalhePartes.push('Vassoura ' + vassoura);
+  if(maestBase || maestEsp) detalhePartes.push('Maestria ' + (maestBase + maestEsp));
+  if(postura) detalhePartes.push('Postura ' + postura);
+  if(evento) detalhePartes.push('Evento ' + evento);
+  if(situacional) detalhePartes.push('Situação ' + situacional);
+  if(boost) detalhePartes.push('Boost ' + boost);
+
+  return { total: total, critico20: dado === 20, dado: dado, bonus: bonusBaseTotal + boost, detalhe: detalhePartes.join(' + ') };
 }
 
 function vencedor(a, b){
@@ -1607,7 +1616,7 @@ case 'sabotar': {
         var advAph = sl(advT(time), 'apanhador');
         var rAtk = rolar(slotAtor, 'agilidade', 'determinacao', { match:match, time:time, pos:'apanhador', tipoVassoura:'manobrabilidade', especialidade:'pomo', acaoObj:ac, situacional:bonusAcumulado });
         var rDef = rolar(advAph, 'agilidade', 'determinacao', { match:match, time:advT(time), pos:'apanhador', tipoVassoura:'manobrabilidade', especialidade:'pomo' });
-        var dadosSab = { atkNome: slotAtor.nome, atkDado: rAtk.dado, atkBonus: rAtk.bonus, atkTotal: rAtk.total, defNome: advAph.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total };
+        var dadosSab = { atkNome: slotAtor.nome, atkDado: rAtk.dado, atkBonus: rAtk.bonus, atkTotal: rAtk.total, atkDetalhe: rAtk.detalhe, defNome: advAph.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total, defDetalhe: rDef.detalhe };
         if(vencedor(rAtk, rDef)){
           savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + advT(time) + '/slots/apanhador', { rastreamento: 0 }));
           savesExtra.push(somarMvpSeq(pid, time + '_apanhador', QUAD_MVP_APANHADOR_SABOTAR));
@@ -1624,7 +1633,7 @@ case 'sabotar': {
         var advAph2 = sl(advT(time), 'apanhador');
         var rAtk2 = rolar(slotAtor, 'determinacao', 'agilidade', { match:match, time:time, pos:'apanhador', tipoVassoura:'velocidade', especialidade:'pomo', acaoObj:ac, situacional:bonusAcumulado });
         var rDef2 = rolar(advAph2, 'agilidade', 'sabedoria', { match:match, time:advT(time), pos:'apanhador', tipoVassoura:'manobrabilidade', especialidade:'pomo' });
-        var dadosCar = { atkNome: slotAtor.nome, atkDado: rAtk2.dado, atkBonus: rAtk2.bonus, atkTotal: rAtk2.total, defNome: advAph2.nome, defDado: rDef2.dado, defBonus: rDef2.bonus, defTotal: rDef2.total };
+var dadosCar = { atkNome: slotAtor.nome, atkDado: rAtk2.dado, atkBonus: rAtk2.bonus, atkTotal: rAtk2.total, atkDetalhe: rAtk2.detalhe, defNome: advAph2.nome, defDado: rDef2.dado, defBonus: rDef2.bonus, defTotal: rDef2.total, defDetalhe: rDef2.detalhe };
         if(vencedor(rAtk2, rDef2)){
           savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + advT(time) + '/slots/apanhador', { rastreamento: 0 }));
           savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/derrubados/' + advT(time) + '_apanhador', true));
@@ -1687,7 +1696,7 @@ function resolverAcaoUnicaFatia1b(pid, match, faseNum, time, pos){
       var gsFP = sl(advTime, 'goleiro');
       var rAtkFP = rolar(slotAtor, 'inteligencia', 'destreza', montarOpcoesRollSeq(match, faseNum, time, pos, 'bonus', 'artilheiro', ac));
       var rDefFP = rolar(gsFP, 'inteligencia', 'forca', montarOpcoesRollSeq(match, faseNum, advTime, 'goleiro', 'bonus', 'defesa'));
-      var dadosFP = { atkNome: slotAtor.nome, atkDado: rAtkFP.dado, atkBonus: rAtkFP.bonus, atkTotal: rAtkFP.total, defNome: gsFP.nome, defDado: rDefFP.dado, defBonus: rDefFP.bonus, defTotal: rDefFP.total };
+      var dadosFP = { atkNome: slotAtor.nome, atkDado: rAtkFP.dado, atkBonus: rAtkFP.bonus, atkTotal: rAtkFP.total, atkDetalhe: rAtkFP.detalhe, defNome: gsFP.nome, defDado: rDefFP.dado, defBonus: rDefFP.bonus, defTotal: rDefFP.total, defDetalhe: rDefFP.detalhe };
       if(vencedor(rAtkFP, rDefFP)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/fintaPasseDebuff/' + advTime, 3));
         savesExtra.push(somarMvpSeq(pid, time + '_' + pos, QUAD_MVP_CONTROLE));
@@ -1702,7 +1711,7 @@ function resolverAcaoUnicaFatia1b(pid, match, faseNum, time, pos){
       var advArt = sl(advTime, 'artilheiro1');
       var rDefAnt = rolar(slotAtor, 'inteligencia', 'agilidade', montarOpcoesRollSeq(match, faseNum, time, 'goleiro', 'estabilidade', 'defesa', ac));
       var rAtkAnt = rolar(advArt, 'inteligencia', 'destreza', montarOpcoesRollSeq(match, faseNum, advTime, 'artilheiro1', 'bonus', 'artilheiro'));
-      var dadosAnt = { atkNome: advArt.nome, atkDado: rAtkAnt.dado, atkBonus: rAtkAnt.bonus, atkTotal: rAtkAnt.total, defNome: slotAtor.nome, defDado: rDefAnt.dado, defBonus: rDefAnt.bonus, defTotal: rDefAnt.total };
+      var dadosMer = { atkNome: slotAtor.nome, atkDado: rAtkMer.dado, atkBonus: rAtkMer.bonus, atkTotal: rAtkMer.total, defNome: gsMer.nome, defDado: rDefMer.dado, defBonus: rDefMer.bonus, defTotal: rDefMer.total };
       if(vencedor(rDefAnt, rAtkAnt)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/antecipeBonus/' + time, 5));
         savesExtra.push(somarMvpSeq(pid, time + '_goleiro', QUAD_MVP_CONTROLE));
@@ -1721,7 +1730,7 @@ function resolverAcaoUnicaFatia1b(pid, match, faseNum, time, pos){
       var situMer = protegidoMer ? 3 : 0;
       var rAtkMer = rolar(slotAtor, 'agilidade', 'destreza', montarOpcoesRollSeq(match, faseNum, time, pos, 'manobrabilidade', 'artilheiro', ac, situMer));
       var rDefMer = rolar(gsMer, 'forca', 'agilidade', montarOpcoesRollSeq(match, faseNum, advTime, 'goleiro', 'estabilidade', 'defesa'));
-      var dadosMer = { atkNome: slotAtor.nome, atkDado: rAtkMer.dado, atkBonus: rAtkMer.bonus, atkTotal: rAtkMer.total, defNome: gsMer.nome, defDado: rDefMer.dado, defBonus: rDefMer.bonus, defTotal: rDefMer.total };
+      var dadosMer = { atkNome: slotAtor.nome, atkDado: rAtkMer.dado, atkBonus: rAtkMer.bonus, atkTotal: rAtkMer.total, atkDetalhe: rAtkMer.detalhe, defNome: gsMer.nome, defDado: rDefMer.dado, defBonus: rDefMer.bonus, defTotal: rDefMer.total, defDetalhe: rDefMer.detalhe };
       if(protegidoMer){
         log('Combo: Cobertura Perfeita. ' + slotAtor.nome + ' mergulha protegido pelo Batedor, bônus extra.');
       }
@@ -1739,7 +1748,7 @@ if(vencedor(rAtkMer, rDefMer)){
       var bsFin = sl(advTime, 'batedor');
       var rAtkFin = rolar(slotAtor, 'agilidade', 'inteligencia', montarOpcoesRollSeq(match, faseNum, time, pos, 'manobrabilidade', 'artilheiro', ac));
       var rDefFin = rolar(bsFin, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, advTime, 'batedor', 'manobrabilidade', 'manobras'));
-      var dadosFin = { atkNome: slotAtor.nome, atkDado: rAtkFin.dado, atkBonus: rAtkFin.bonus, atkTotal: rAtkFin.total, defNome: bsFin.nome, defDado: rDefFin.dado, defBonus: rDefFin.bonus, defTotal: rDefFin.total };
+      var dadosFin = { atkNome: slotAtor.nome, atkDado: rAtkFin.dado, atkBonus: rAtkFin.bonus, atkTotal: rAtkFin.total, atkDetalhe: rAtkFin.detalhe, defNome: bsFin.nome, defDado: rDefFin.dado, defBonus: rDefFin.bonus, defTotal: rDefFin.total, defDetalhe: rDefFin.detalhe };
       if(vencedor(rAtkFin, rDefFin)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/fintouB/' + time + '_' + pos, true));
         savesExtra.push(somarMvpSeq(pid, time + '_' + pos, QUAD_MVP_CONTROLE));
@@ -1760,7 +1769,7 @@ if(vencedor(rAtkMer, rDefMer)){
       var alsDA = sl(advTime, ac.alvo);
       var rAtkDA = rolar(slotAtor, 'forca', 'agilidade', montarOpcoesRollSeq(match, faseNum, time, 'goleiro', 'velocidade', 'defesa', ac));
       var rDefDA = rolar(alsDA, 'agilidade', 'destreza', montarOpcoesRollSeq(match, faseNum, advTime, ac.alvo, 'bonus', 'artilheiro'));
-      var dadosDA = { atkNome: slotAtor.nome, atkDado: rAtkDA.dado, atkBonus: rAtkDA.bonus, atkTotal: rAtkDA.total, defNome: alsDA.nome, defDado: rDefDA.dado, defBonus: rDefDA.bonus, defTotal: rDefDA.total };
+      var dadosDA = { atkNome: slotAtor.nome, atkDado: rAtkDA.dado, atkBonus: rAtkDA.bonus, atkTotal: rAtkDA.total, atkDetalhe: rAtkDA.detalhe, defNome: alsDA.nome, defDado: rDefDA.dado, defBonus: rDefDA.bonus, defTotal: rDefDA.total, defDetalhe: rDefDA.detalhe };
       if(vencedor(rAtkDA, rDefDA)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/derrubados/' + advTime + '_' + ac.alvo, true));
         savesExtra.push(somarMvpSeq(pid, time + '_goleiro', QUAD_MVP_DEBUFF));
@@ -1776,7 +1785,7 @@ if(vencedor(rAtkMer, rDefMer)){
       var as1Int = sl(advTime, 'artilheiro1');
       var rAtkInt = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, time, 'batedor', 'bonus', 'manobras', ac));
       var rDefInt = rolar(as1Int, 'destreza', 'agilidade', montarOpcoesRollSeq(match, faseNum, advTime, 'artilheiro1', 'bonus', 'artilheiro'));
-      var dadosInt = { atkNome: slotAtor.nome, atkDado: rAtkInt.dado, atkBonus: rAtkInt.bonus, atkTotal: rAtkInt.total, defNome: as1Int.nome, defDado: rDefInt.dado, defBonus: rDefInt.bonus, defTotal: rDefInt.total };
+      var dadosInt = { atkNome: slotAtor.nome, atkDado: rAtkInt.dado, atkBonus: rAtkInt.bonus, atkTotal: rAtkInt.total, atkDetalhe: rAtkInt.detalhe, defNome: as1Int.nome, defDado: rDefInt.dado, defBonus: rDefInt.bonus, defTotal: rDefInt.total, defDetalhe: rDefInt.detalhe };
       if(vencedor(rAtkInt, rDefInt)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/interceptados/' + advTime, true));
         savesExtra.push(somarMvpSeq(pid, time + '_batedor', QUAD_MVP_CONTROLE));
@@ -1791,7 +1800,7 @@ case 'blitz': {
       var as1Bli = sl(advTime, 'artilheiro1');
       var rDefBli = rolar(slotAtor, 'forca', 'agilidade', montarOpcoesRollSeq(match, faseNum, time, 'goleiro', 'velocidade', 'defesa', ac));
       var rAtkBli = rolar(as1Bli, 'destreza', 'agilidade', montarOpcoesRollSeq(match, faseNum, advTime, 'artilheiro1', 'bonus', 'artilheiro'));
-      var dadosBli = { atkNome: as1Bli.nome, atkDado: rAtkBli.dado, atkBonus: rAtkBli.bonus, atkTotal: rAtkBli.total, defNome: slotAtor.nome, defDado: rDefBli.dado, defBonus: rDefBli.bonus, defTotal: rDefBli.total };
+      var dadosBli = { atkNome: as1Bli.nome, atkDado: rAtkBli.dado, atkBonus: rAtkBli.bonus, atkTotal: rAtkBli.total, atkDetalhe: rAtkBli.detalhe, defNome: slotAtor.nome, defDado: rDefBli.dado, defBonus: rDefBli.bonus, defTotal: rDefBli.total, defDetalhe: rDefBli.detalhe };
       if(vencedorOuIgual(rDefBli, rAtkBli)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/blitzResult/' + time, 'ok'));
         savesExtra.push(somarMvpSeq(pid, time + '_goleiro', QUAD_MVP_BLITZ));
@@ -1882,8 +1891,8 @@ var passeBonus = ((faseObj.bonusSituacional || {})[time + '_' + pos]) || 0;
   var rDef = rolar(gs, 'forca', 'agilidade', montarOpcoesRollSeq(match, faseNum, golvT, 'goleiro', 'estabilidade', 'defesa', acaoGoleiro, situDef));
 
 var dadosDuelo = {
-    atkNome: ast.nome, atkDado: rAtk.dado, atkBonus: rAtk.bonus, atkTotal: rAtk.total,
-    defNome: gs.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total
+    atkNome: ast.nome, atkDado: rAtk.dado, atkBonus: rAtk.bonus, atkTotal: rAtk.total, atkDetalhe: rAtk.detalhe,
+    defNome: gs.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total, defDetalhe: rDef.detalhe
   };
 
   if(vencedor(rAtk, rDef)){
@@ -1976,7 +1985,7 @@ function resolverAcaoUnicaFatia1c(pid, match, faseNum, time, pos){
 
 var rAtkLB = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, time, 'batedor', 'velocidade', 'manobras', ac));
       var rDefLB = rolar(alsLB, 'agilidade', 'resistencia', montarOpcoesRollSeq(match, faseNum, advTime, ac.alvo, 'bonus', null));
-      var dadosLB = { atkNome: slotAtor.nome, atkDado: rAtkLB.dado, atkBonus: rAtkLB.bonus, atkTotal: rAtkLB.total, defNome: alsLB.nome, defDado: rDefLB.dado, defBonus: rDefLB.bonus, defTotal: rDefLB.total };
+      var dadosLB = { atkNome: slotAtor.nome, atkDado: rAtkLB.dado, atkBonus: rAtkLB.bonus, atkTotal: rAtkLB.total, atkDetalhe: rAtkLB.detalhe, defNome: alsLB.nome, defDado: rDefLB.dado, defBonus: rDefLB.bonus, defTotal: rDefLB.total, defDetalhe: rDefLB.detalhe };
       if(vencedor(rAtkLB, rDefLB)){
         savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + advTime + '/slots/' + ac.alvo, {
           debuff: { atributo: MAIN_ATTR[ac.alvo] || 'agilidade', valor:-2, fases:1, faseAplicada: faseNum }
@@ -1995,7 +2004,7 @@ var rAtkLB = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match,
       var alsD = sl(advTime, ac.alvo);
       var rAtkD = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, time, 'batedor', 'velocidade', 'manobras', ac));
       var rDefD = rolar(alsD, 'agilidade', 'resistencia', montarOpcoesRollSeq(match, faseNum, advTime, ac.alvo, 'bonus', null));
-      var dadosD = { atkNome: slotAtor.nome, atkDado: rAtkD.dado, atkBonus: rAtkD.bonus, atkTotal: rAtkD.total, defNome: alsD.nome, defDado: rDefD.dado, defBonus: rDefD.bonus, defTotal: rDefD.total };
+      var dadosD = { atkNome: slotAtor.nome, atkDado: rAtkD.dado, atkBonus: rAtkD.bonus, atkTotal: rAtkD.total, atkDetalhe: rAtkD.detalhe, defNome: alsD.nome, defDado: rDefD.dado, defBonus: rDefD.bonus, defTotal: rDefD.total, defDetalhe: rDefD.detalhe };
       if(vencedor(rAtkD, rDefD)){
         savesExtra.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/derrubados/' + advTime + '_' + ac.alvo, true));
         savesExtra.push(somarMvpSeq(pid, time + '_batedor', QUAD_MVP_DEBUFF));
@@ -2017,7 +2026,7 @@ var rAtkLB = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match,
       var alsPA = sl(advTime, ac.alvo);
       var rAtkPA = rolar(slotAtor, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, time, 'batedor', 'velocidade', 'manobras', ac));
       var rDefPA = rolar(alsPA, 'determinacao', 'inteligencia', montarOpcoesRollSeq(match, faseNum, advTime, ac.alvo, 'bonus', null));
-      var dadosPA = { atkNome: slotAtor.nome, atkDado: rAtkPA.dado, atkBonus: rAtkPA.bonus, atkTotal: rAtkPA.total, defNome: alsPA.nome, defDado: rDefPA.dado, defBonus: rDefPA.bonus, defTotal: rDefPA.total };
+      var dadosPA = { atkNome: slotAtor.nome, atkDado: rAtkPA.dado, atkBonus: rAtkPA.bonus, atkTotal: rAtkPA.total, atkDetalhe: rAtkPA.detalhe, defNome: alsPA.nome, defDado: rDefPA.dado, defBonus: rDefPA.bonus, defTotal: rDefPA.total, defDetalhe: rDefPA.detalhe };
       if(vencedor(rAtkPA, rDefPA)){
         savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + advTime + '/slots/' + ac.alvo, {
           debuff: { atributo: MAIN_ATTR[ac.alvo] || 'agilidade', valor:-2, fases:1, faseAplicada: faseNum }
@@ -2147,7 +2156,7 @@ function resolverComboCombinado(pid, match, faseNum, time, comboPendente, posCom
     rBat = rolar(bs, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, time, 'batedor', 'bonus', 'manobras', acBatedor));
     rDef = rolar(advArt, 'inteligencia', 'destreza', montarOpcoesRollSeq(match, faseNum, advTime, 'artilheiro1', 'bonus', 'artilheiro'));
     var rComboM = { total: (rGol.total + rBat.total) / 2, critico20: rGol.critico20 || rBat.critico20 };
-    var dadosComboM = { atkNome: gs.nome + ' + ' + bs.nome, atkDado: rGol.dado + '/' + rBat.dado, atkBonus: rGol.bonus + '/' + rBat.bonus, atkTotal: rComboM.total, defNome: advArt.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total };
+    var dadosComboM = { atkNome: gs.nome + ' + ' + bs.nome, atkDado: rGol.dado + '/' + rBat.dado, atkBonus: rGol.bonus + '/' + rBat.bonus, atkTotal: rComboM.total, atkDetalhe: 'Goleiro: ' + rGol.detalhe + ' | Batedor: ' + rBat.detalhe, defNome: advArt.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total, defDetalhe: rDef.detalhe };
     sucesso = vencedor(rComboM, rDef);
     if(sucesso){
       saves.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/antecipeBonus/' + time, 7));
@@ -2163,7 +2172,7 @@ function resolverComboCombinado(pid, match, faseNum, time, comboPendente, posCom
     rBat = rolar(bs, 'forca', 'determinacao', montarOpcoesRollSeq(match, faseNum, time, 'batedor', 'bonus', 'manobras', acBatedor));
     rDef = rolar(advArt, 'destreza', 'agilidade', montarOpcoesRollSeq(match, faseNum, advTime, 'artilheiro1', 'bonus', 'artilheiro'));
     var rComboC = { total: (rGol.total + rBat.total) / 2, critico20: rGol.critico20 || rBat.critico20 };
-    var dadosComboC = { atkNome: gs.nome + ' + ' + bs.nome, atkDado: rGol.dado + '/' + rBat.dado, atkBonus: rGol.bonus + '/' + rBat.bonus, atkTotal: rComboC.total, defNome: advArt.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total };
+    var dadosComboC = { atkNome: gs.nome + ' + ' + bs.nome, atkDado: rGol.dado + '/' + rBat.dado, atkBonus: rGol.bonus + '/' + rBat.bonus, atkTotal: rComboC.total, atkDetalhe: 'Goleiro: ' + rGol.detalhe + ' | Batedor: ' + rBat.detalhe, defNome: advArt.nome, defDado: rDef.dado, defBonus: rDef.bonus, defTotal: rDef.total, defDetalhe: rDef.detalhe };
     sucesso = vencedorOuIgual(rComboC, rDef);
     if(sucesso){
       saves.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/blitzResult/' + time, 'ok'));
@@ -2301,7 +2310,7 @@ var logIndex = logSequencialProxIndex(match, faseNum);
     var aphA = sl('A', 'apanhador'), aphB = sl('B', 'apanhador');
     var rA = rolarPomo(aphA, { match:match, time:'A', pos:'apanhador', rastreio: aphA.rastreamento || 0 });
     var rB = rolarPomo(aphB, { match:match, time:'B', pos:'apanhador', rastreio: aphB.rastreamento || 0 });
-    var dadosPomo = { atkNome: aphA.nome, atkDado: rA.dado, atkBonus: rA.bonus, atkTotal: rA.total, defNome: aphB.nome, defDado: rB.dado, defBonus: rB.bonus, defTotal: rB.total };
+    var dadosPomo = { atkNome: aphA.nome, atkDado: rA.dado, atkBonus: rA.bonus, atkTotal: rA.total, atkDetalhe: rA.detalhe, defNome: aphB.nome, defDado: rB.dado, defBonus: rB.bonus, defTotal: rB.total, defDetalhe: rB.detalhe };
 
     log('O POMO DE OURO APARECEU! ' + aphA.nome + ' e ' + aphB.nome + ' disputam. Ambos tomam -' + QUAD_HP_DANO + ' HP.');
     if(aphA.uid && aphA.uid !== 'npc') saves.push(deduzirHp(aphA.uid, QUAD_HP_DANO));
@@ -2548,8 +2557,10 @@ function montarFila(ordemA, ordemB){
 
 function spoilerDadosHtml(dados){
   if(!dados) return '';
-  var detalhe = dados.atkNome + ': dado ' + dados.atkDado + ' + bônus ' + dados.atkBonus + ' = ' + dados.atkTotal +
-    '  |  ' + dados.defNome + ': dado ' + dados.defDado + ' + bônus ' + dados.defBonus + ' = ' + dados.defTotal;
+  var partAtk = dados.atkDetalhe ? ' (' + dados.atkDetalhe + ')' : '';
+  var partDef = dados.defDetalhe ? ' (' + dados.defDetalhe + ')' : '';
+  var detalhe = dados.atkNome + ': dado ' + dados.atkDado + ' + bônus ' + dados.atkBonus + partAtk + ' = ' + dados.atkTotal +
+    '  |  ' + dados.defNome + ': dado ' + dados.defDado + ' + bônus ' + dados.defBonus + partDef + ' = ' + dados.defTotal;
   return ' <i class="fa fa-dice-d20 q3logdado" onclick="var s=this.nextElementSibling;s.hidden=!s.hidden;" title="ver os dados"></i>' +
     '<span class="q3logdadospoiler" hidden>' + escaparHtml(detalhe) + '</span>';
 }
