@@ -90,6 +90,9 @@ var QUAD_MVP_APANHADOR_SABOTAR = 2;
 var QUAD_MVP_APANHADOR_CARREGAR = 3;
 var QUAD_MVP_APANHADOR_DISTRACAO = 2;
 var QUAD_MVP_COMBO = 5;
+var QUAD_MVP_DEFESA = 3;
+var QUAD_MVP_GOL = 4;
+var QUAD_MVP_GOL_BONUS = 8;
 
 
 
@@ -1936,6 +1939,12 @@ function pontosGolSeq(match, faseNum, time){
   return ativo ? 20 : 10;
 }
 
+function mvpPontosGolSeq(match, faseNum, time){
+  var bonusPomo = match.pomo_bonus;
+  var ativo = bonusPomo && faseNum <= bonusPomo.ate_fase && bonusPomo.time === time;
+  return ativo ? QUAD_MVP_GOL_BONUS : QUAD_MVP_GOL;
+}
+
 function resolverArremessoUnico(pid, match, faseNum, time, pos){
   var faseObj = match.fases[faseNum] || {};
   var acoesFase = faseObj.acoes || {};
@@ -1973,7 +1982,7 @@ function resolverArremessoUnico(pid, match, faseNum, time, pos){
   if(blitzResult[golvT] === 'fail'){
     var ptsBlitz = pontosGolSeq(match, faseNum, time);
     savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time, { placar: (match.times[time].placar || 0) + ptsBlitz }));
-    savesExtra.push(somarMvpSeq(pid, time + '_' + pos, ptsBlitz));
+    savesExtra.push(somarMvpSeq(pid, time + '_' + pos, mvpPontosGolSeq(match, faseNum, time)));
     log(ast.nome + ' arremessou com os aros desprotegidos. GOL! +' + ptsBlitz + ' para ' + match.times[time].nome + '.');
     return finalizar();
   }
@@ -2008,9 +2017,10 @@ var dadosDuelo = {
   if(vencedor(rAtk, rDef)){
     var pts = pontosGolSeq(match, faseNum, time);
     savesExtra.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time, { placar: (match.times[time].placar || 0) + pts }));
-    savesExtra.push(somarMvpSeq(pid, time + '_' + pos, pts));
+    savesExtra.push(somarMvpSeq(pid, time + '_' + pos, mvpPontosGolSeq(match, faseNum, time)));
     log(ast.nome + ' arremessou a Goles nos aros. GOOOOL! +' + pts + ' para ' + match.times[time].nome + '.', { afeta: [golvT + '_goleiro'], dados: dadosDuelo });
   }else{
+    savesExtra.push(somarMvpSeq(pid, golvT + '_goleiro', QUAD_MVP_DEFESA));
     log(ast.nome + ' arremessou, mas ' + gs.nome + ' defendeu.', { afeta: [golvT + '_goleiro'], dados: dadosDuelo });
   }
   return finalizar();
@@ -2204,7 +2214,7 @@ function resolverArremessoContraGoleiroCaido(pid, match, faseNum, time, pos, gol
     });
     saves.push(fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/golsGoleiroCaido/' + golvT, marcadorGols));
     saves.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + time, { placar: (match.times[time].placar || 0) + pts }));
-    saves.push(somarMvpSeq(pid, time + '_' + pos, pts));
+    saves.push(somarMvpSeq(pid, time + '_' + pos, mvpPontosGolSeq(match, faseNum, time)));
     saves.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/acoes/' + time + '_' + pos, { resolvida: true }));
     saves.push(fbDel(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + faseNum + '/pendentes/' + time + '_' + pos));
     return Promise.all(saves);
