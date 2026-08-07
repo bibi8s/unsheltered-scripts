@@ -535,15 +535,30 @@ function forcarAvancarTurnoAdmin(){
 
 function resetarFaseAdmin(){
   if(!isAdmin || !pid) return;
-  if(!confirm('Resetar a fase atual? Isso apaga as ações já enviadas nesta fase e reinicia os turnos dela do zero (mesma ordem de fila). Efeitos que já foram resolvidos (dano, energia, log) NÃO são desfeitos — use só quando a fase travou antes de resolver a ação pendente.')) return;
+  if(!confirm('Resetar a fase atual? Isso apaga TUDO que já foi registrado nesta fase (ações, log, proteções, debuffs de fase, combos pendentes etc.) e reinicia os turnos dela do zero (mesma ordem de fila). Efeitos que já foram aplicados fora da fase (dano no HP, energia gasta) NÃO são desfeitos — use só quando a fase travou antes de resolver a ação pendente.')) return;
 
   fbGet(QUAD_FB_PARTIDAS, '/partidas/' + pid).then(function(match){
     if(!match) return;
     var fase = match.fase_atual;
+    var caminhoFase = '/partidas/' + pid + '/fases/' + fase;
 
     Promise.all([
-      fbDel(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + fase + '/acoes'),
-      fbDel(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + fase + '/pendente_capitao'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/acoes'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/pendente_capitao'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/resultado'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/fechando'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/protegidos'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/derrubados'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/fintouB'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/bonusSituacional'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/interceptados'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/blitzResult'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/antecipeBonus'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/fintaPasseDebuff'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/pendentes'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/comboPendente'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/distraido'),
+      fbDel(QUAD_FB_PARTIDAS, caminhoFase + '/golsGoleiroCaido'),
       fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, {
         turno_idx: 0,
         turno_deadline: Date.now() + QUAD_TURNO_SECS * 1000
@@ -1363,6 +1378,14 @@ function confirmarDecisaoCapitao(time, pos, acaoId, alvo){
   fbGet(QUAD_FB_PARTIDAS, '/partidas/' + pid).then(function(match){
     if(!match) return;
     var fase = match.fase_atual;
+
+    var acaoJaExiste = ((match.fases[fase] || {}).acoes || {})[sk];
+    if(acaoJaExiste){
+      var boxJaAgiu = document.getElementById('q3carddecisao_' + sk);
+      if(boxJaAgiu) boxJaAgiu.innerHTML = '<div class="qlbl">o jogador já agiu, decisão não é mais necessária.</div>';
+      fbDel(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + fase + '/pendente_capitao');
+      return;
+    }
 
     Promise.all([
       fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + fase + '/acoes/' + sk, {
@@ -2490,57 +2513,65 @@ function esperar(ms){
 }
 
 function fecharFaseSequencial(pid, match, faseNum){
-  return resolverDisputaForcadaPomoSeq(pid, match, faseNum).then(function(){
-    return fbGet(QUAD_FB_PARTIDAS, '/partidas/' + pid);
-  }).then(function(matchAtual){
-    if(!matchAtual) return Promise.resolve();
+  var caminhoTrava = '/partidas/' + pid + '/fases/' + faseNum + '/fechando';
 
-    var saves = [];
+  return fbGet(QUAD_FB_PARTIDAS, caminhoTrava).then(function(jaFechando){
+    if(jaFechando) return 'ja_fechando';
+    return fbPut(QUAD_FB_PARTIDAS, caminhoTrava, true).then(function(){ return 'pode_fechar'; });
+  }).then(function(status){
+    if(status === 'ja_fechando') return Promise.resolve();
 
-    ['A','B'].forEach(function(t){
-      POSICOES.forEach(function(pos){
-        var slot = matchAtual.times[t].slots[pos];
-        if(slot && slot.debuff && !slot.debuff.permanente && slot.debuff.faseAplicada !== faseNum){
-          var restante = slot.debuff.fases - 1;
-          saves.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + t + '/slots/' + pos, {
-            debuff: restante > 0 ? { atributo:slot.debuff.atributo, valor:slot.debuff.valor, fases:restante, faseAplicada: slot.debuff.faseAplicada } : null
-          }));
-        }
-      });
-    });
+    return resolverDisputaForcadaPomoSeq(pid, match, faseNum).then(function(){
+      return fbGet(QUAD_FB_PARTIDAS, '/partidas/' + pid);
+    }).then(function(matchAtual){
+      if(!matchAtual) return Promise.resolve();
 
-    var nextFase = faseNum + 1;
-    var isEncerrada = nextFase > QUAD_FASES_TOTAL;
+      var saves = [];
 
-    return Promise.all(saves).then(function(){
-      return esperar(QUAD_PAUSA_ENTRE_FASES_MS).then(function(){
-        if(isEncerrada){
-          return finalizarPartidaSequencial(pid, matchAtual);
-        }
-var eventoAtivoAtual = matchAtual.evento_ativo;
-        var eventoAindaAtivo = eventoAtivoAtual && nextFase <= eventoAtivoAtual.ate_fase;
-        var novaFaseObj = { acoes:{} };
-        var patchMatch = { fase_atual: nextFase };
-
-        if(!eventoAindaAtivo){
-          var eventoNovo = sortearEvento();
-          if(eventoNovo){
-            patchMatch.evento_ativo = { id: eventoNovo.id, nome: eventoNovo.nome, ativo: eventoNovo.ativo, desde_fase: nextFase, ate_fase: nextFase + QUAD_EVENTO_DURACAO_FASES };
-            novaFaseObj.resultado = { log: [{ text: eventoNovo.inicio, evento: true, nome: eventoNovo.nome }] };
-          }else if(eventoAtivoAtual){
-            patchMatch.evento_ativo = null;
+      ['A','B'].forEach(function(t){
+        POSICOES.forEach(function(pos){
+          var slot = matchAtual.times[t].slots[pos];
+          if(slot && slot.debuff && !slot.debuff.permanente && slot.debuff.faseAplicada !== faseNum){
+            var restante = slot.debuff.fases - 1;
+            saves.push(fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/times/' + t + '/slots/' + pos, {
+              debuff: restante > 0 ? { atributo:slot.debuff.atributo, valor:slot.debuff.valor, fases:restante, faseAplicada: slot.debuff.faseAplicada } : null
+            }));
           }
-        }
+        });
+      });
 
-        return Promise.all([
-          fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, patchMatch),
-          fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + nextFase, novaFaseObj)
-        ]);
+      var nextFase = faseNum + 1;
+      var isEncerrada = nextFase > QUAD_FASES_TOTAL;
+
+      return Promise.all(saves).then(function(){
+        return esperar(QUAD_PAUSA_ENTRE_FASES_MS).then(function(){
+          if(isEncerrada){
+            return finalizarPartidaSequencial(pid, matchAtual);
+          }
+          var eventoAtivoAtual = matchAtual.evento_ativo;
+          var eventoAindaAtivo = eventoAtivoAtual && nextFase <= eventoAtivoAtual.ate_fase;
+          var novaFaseObj = { acoes:{} };
+          var patchMatch = { fase_atual: nextFase };
+
+          if(!eventoAindaAtivo){
+            var eventoNovo = sortearEvento();
+            if(eventoNovo){
+              patchMatch.evento_ativo = { id: eventoNovo.id, nome: eventoNovo.nome, ativo: eventoNovo.ativo, desde_fase: nextFase, ate_fase: nextFase + QUAD_EVENTO_DURACAO_FASES };
+              novaFaseObj.resultado = { log: [{ text: eventoNovo.inicio, evento: true, nome: eventoNovo.nome }] };
+            }else if(eventoAtivoAtual){
+              patchMatch.evento_ativo = null;
+            }
+          }
+
+          return Promise.all([
+            fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, patchMatch),
+            fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + nextFase, novaFaseObj)
+          ]);
+        });
       });
     });
   });
 }
-
  
 
 var logAbasEstado = {};
