@@ -2573,10 +2573,9 @@ function fecharFaseSequencial(pid, match, faseNum){
             }
           }
 
-          return Promise.all([
-            fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, patchMatch),
-            fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + nextFase, novaFaseObj)
-          ]);
+          return fbPut(QUAD_FB_PARTIDAS, '/partidas/' + pid + '/fases/' + nextFase, novaFaseObj).then(function(){
+            return fbPatch(QUAD_FB_PARTIDAS, '/partidas/' + pid, patchMatch);
+          });
         });
       });
     });
